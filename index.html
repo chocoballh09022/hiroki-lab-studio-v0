@@ -1399,38 +1399,6 @@ function registerTransportToExpense(){
     }
     if(count>0){save();renderExpense();runSimulation();customAlert(`${count}件の交通費を一括登録しました！`,'success');}
 }
-    if(!rcFiles.length)return;
-    const btn=document.getElementById('btn-analyze');
-    btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>解析中...';btn.disabled=true;
-    try{
-        const parts=await Promise.all(rcFiles.map(async f=>{const b=await b64(f);const mt=f.type||(f.name.toLowerCase().endsWith('heic')?'image/heic':'image/jpeg');return{inlineData:{mimeType:mt,data:b}};}));
-        const prompt=`領収書・レシートの画像を正確に解析し、以下の厳密なCSV形式で出力せよ。
-
-【出力フォーマット（ヘッダー行必須）】
-取引日,科目,取引手段,摘要,取引先,税込金額,消費税率,軽減税率対象
-
-【絶対に守るルール】
-1. 「税込金額」は画像に記載された税込合計金額の「整数のみ」を出力すること。¥マーク・カンマ・円・スペース・小数点は一切含めない。例: 1180
-2. 「消費税率」は 8 または 10 の数字のみ（%記号不要）
-3. 全フィールドでカンマを使用禁止（値にカンマが必要な場合はスペースで代替）
-4. 「科目」は 会議費 / 接待交際費 / 消耗品費 / 交通費 / 外注費 / 経費 のいずれか
-5. 「摘要」は店名・商品名など画像から読み取った内容（カンマ不使用）
-6. 「取引先」は店名・販売元名（カンマ不使用）
-7. 日付はYYYY-MM-DD形式
-8. コードブロックや余計な文章を含めず、CSVのみを出力すること`;
-        const data=await fetchAI({contents:[{role:'user',parts:[{text:prompt},...parts]}]});
-        if(!data.candidates||data.candidates.length===0)throw new Error('AIが回答を生成できませんでした。');
-        const csv=extractCsv(data.candidates[0].content.parts[0].text||'');
-        document.getElementById('ai-output').value=csv;
-        document.getElementById('ai-result-container').classList.remove('hidden');
-        const ts=new Date().toLocaleString('ja-JP');
-        S.receiptHistory.unshift({id:Date.now().toString(),type:'経費',date:ts,csv});save();renderReceiptHistory();
-        rcFiles=[];renderFileList(rcFiles,'file-list','');
-    }catch(e){
-        if(e.message==='API_KEY_ERROR')customAlert('APIキーが未設定か無効です。設定タブを確認してください。','error');
-        else customAlert(`エラー: ${e.message}`,'error');
-    }finally{btn.innerHTML='<i class="fas fa-magic mr-2"></i>レシートをAI解析';btn.disabled=false;}
-}
 
 function copyCsv(id){const text=document.getElementById(id).value;if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>customAlert('コピーしました！','success')).catch(()=>{fallbackCopy(text);});}else{fallbackCopy(text);}}
 function fallbackCopy(text){const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');customAlert('コピーしました！','success');}catch(e){}document.body.removeChild(ta);}
@@ -1458,7 +1426,6 @@ function viewHistory(id){
 function delHistory(id){customConfirm('この履歴を削除しますか？',()=>{S.receiptHistory=S.receiptHistory.filter(x=>x.id!==id);save();renderReceiptHistory();});}
 
 // ====== Firebase Cloud Sync ======
-// ユーザーのFirebaseプロジェクト設定
 const FIREBASE_CONFIG = {
     apiKey: "AIzaSyA1tuWKJRYlA48KsF-Vd3Tzo5zAy8FV3cQ",
     authDomain: "zaimu-muraoka.firebaseapp.com",
@@ -1467,41 +1434,43 @@ const FIREBASE_CONFIG = {
     messagingSenderId: "783805203277",
     appId: "1:783805203277:web:fe085d988172a041d7ad04"
 };
-const FS_DOC_PATH = ['erp_data','cr_erp_shared']; // Firestore: コレクション名/ドキュメントID
 
-let _fsDoc=null, _isSyncing=false;
+// Firebase objects populated after init; save() uses these directly (no dynamic import in save)
+let _setDoc = null;
+let _fsDoc  = null;
+let _isSyncing = false;
 
-// 既存のsave()をFirebase対応に再定義（上書きではなくグローバル再宣言）
 async function save(){
     S.lastUpdated = new Date().toISOString();
-    // localStorage へ常に保存
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); }catch(e){ console.error(e); }
     updateLastUpdatedLabel();
-    const ic=document.getElementById('sync-icon'), tx=document.getElementById('sync-text');
-    // Firestore が使えるなら同期
-    if(_fsDoc && !_isSyncing){
-        ic.className='fas fa-sync fa-spin text-blue-500'; tx.textContent='同期中...';
+    const ic = document.getElementById('sync-icon');
+    const tx = document.getElementById('sync-text');
+    if(!ic || !tx) return;
+    if(_setDoc && _fsDoc && !_isSyncing){
+        ic.className = 'fas fa-sync fa-spin text-blue-500'; tx.textContent = '同期中...';
         try{
-            const {setDoc} = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
-            await setDoc(_fsDoc, {state: JSON.stringify(S), updatedAt: S.lastUpdated});
-            ic.className='fas fa-cloud text-blue-500'; tx.textContent='クラウド同期済';
+            await _setDoc(_fsDoc, {state: JSON.stringify(S), updatedAt: S.lastUpdated});
+            ic.className = 'fas fa-cloud text-blue-500'; tx.textContent = 'クラウド同期済';
         }catch(e){
             console.error('Firestore write:', e);
-            ic.className='fas fa-exclamation-triangle text-amber-500'; tx.textContent='同期エラー';
+            ic.className = 'fas fa-exclamation-triangle text-amber-500'; tx.textContent = '同期エラー';
         }
     } else {
-        ic.className='fas fa-check-circle text-emerald-500'; tx.textContent='ローカル保存済';
+        ic.className = 'fas fa-check-circle text-emerald-500'; tx.textContent = '保存しました';
         clearTimeout(save._t);
-        save._t = setTimeout(()=>{ic.className='fas fa-hdd text-slate-400'; tx.textContent='ローカル保存モード';}, 2000);
+        save._t = setTimeout(()=>{
+            ic.className = 'fas fa-hdd text-slate-400'; tx.textContent = 'ローカル保存モード';
+        }, 2000);
     }
 }
 
-// Firebase初期化（失敗してもアプリ全体に影響しない）
+// Firebase init — failures are fully isolated from the rest of the app
 (async()=>{
     try{
-        const {initializeApp}     = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
+        const {initializeApp}    = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
         const {getAuth, signInAnonymously, onAuthStateChanged} = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
-        const {getFirestore, doc, onSnapshot} = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+        const {getFirestore, doc, setDoc, onSnapshot} = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
 
         const app  = initializeApp(FIREBASE_CONFIG);
         const auth = getAuth(app);
@@ -1509,36 +1478,36 @@ async function save(){
 
         onAuthStateChanged(auth, user => {
             if(!user) return;
-            const docRef = doc(db, ...FS_DOC_PATH);
-            _fsDoc = docRef; // save() から書き込めるようにする
+            const docRef = doc(db, 'erp_data', 'cr_erp_shared');
+            _setDoc = setDoc;   // 関数参照を保持
+            _fsDoc  = docRef;   // ドキュメント参照を保持
 
-            // リアルタイム受信：他デバイスの更新を自動反映
+            // リアルタイム受信 — 他デバイスの変更を自動反映
             onSnapshot(docRef, snap => {
                 if(!snap.exists()) return;
-                const remote = JSON.parse(snap.data().state || '{}');
-                if(remote.lastUpdated && remote.lastUpdated !== S.lastUpdated){
-                    _isSyncing = true;
-                    S = migrate(remote);
-                    renderAll();
-                    _isSyncing = false;
-                    const ic=document.getElementById('sync-icon'), tx=document.getElementById('sync-text');
-                    ic.className='fas fa-cloud text-blue-500'; tx.textContent='他デバイスから同期';
-                }
+                try{
+                    const remote = JSON.parse(snap.data().state || '{}');
+                    if(remote.lastUpdated && remote.lastUpdated !== S.lastUpdated){
+                        _isSyncing = true;
+                        S = migrate(remote);
+                        renderAll();
+                        _isSyncing = false;
+                        const ic=document.getElementById('sync-icon'), tx=document.getElementById('sync-text');
+                        if(ic){ ic.className='fas fa-cloud text-blue-500'; tx.textContent='他デバイスから同期'; }
+                    }
+                }catch(err){ console.error('snapshot parse error:', err); }
             }, err => {
-                // Firestoreルール未設定時など → ローカルモードに留まる
-                console.warn('Firestore listen error (check rules):', err.message);
-                _fsDoc = null;
+                console.warn('Firestore rules not set — local only:', err.message);
+                _setDoc = null; _fsDoc = null;
                 const ic=document.getElementById('sync-icon'), tx=document.getElementById('sync-text');
-                ic.className='fas fa-exclamation-triangle text-amber-400';
-                tx.textContent='ルール要設定（ローカルのみ）';
+                if(ic){ ic.className='fas fa-exclamation-triangle text-amber-400'; tx.textContent='ルール要設定（ローカルのみ）'; }
             });
         });
 
         await signInAnonymously(auth);
 
     }catch(e){
-        console.warn('Firebase init failed, localStorage only:', e.message);
-        // ここで失敗してもsave()はlocalStorageで動き続ける
+        console.warn('Firebase unavailable, using localStorage only:', e.message);
     }
 })();
 </script>

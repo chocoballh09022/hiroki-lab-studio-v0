@@ -87,7 +87,7 @@
     <!-- Top Bar -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-slate-200 gap-3">
         <div class="text-[10px] sm:text-xs font-bold text-slate-500 bg-white px-3 py-1.5 rounded border border-slate-200 shadow-sm flex items-center shrink-0">
-            <i class="fas fa-user-circle mr-2 text-blue-500"></i>CD / インボイス2割特例 / 青色65万
+            <i class="fas fa-user-circle mr-2 text-blue-500"></i><span id="profile-badge">CD / インボイス2割特例 / 青色65万</span>
         </div>
         <div class="flex items-center justify-between w-full sm:w-auto flex-wrap gap-3">
             <div class="flex items-center gap-2 flex-wrap">
@@ -161,14 +161,12 @@
                             <input type="number" id="dash-expense" class="w-full bg-slate-50 border rounded-lg py-2 pl-8 pr-3 font-bold disabled:opacity-60 disabled:bg-slate-100" oninput="runSimulation()" readonly></div>
                             <p id="dash-exp-help" class="text-[10px] text-slate-400 mt-1">※按分経費＋支出管理表＋サブスクから合算</p>
                         </div>
-                        <div class="bg-slate-50 p-3 rounded-xl border space-y-2">
+                        <div class="bg-slate-50 p-3 rounded-xl border">
                             <div class="flex justify-between items-center">
-                                <span class="text-xs font-bold text-slate-500">源泉徴収 考慮（一律）</span>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="dash-withholding" class="sr-only peer" onchange="onWithholdingChange()" checked>
-                                    <div class="w-9 h-5 bg-slate-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                                </label>
+                                <span class="text-xs font-bold text-slate-500">税務プロファイル</span>
+                                <button onclick="switchTab('settings')" class="text-xs text-blue-500 hover:text-blue-700 font-bold"><i class="fas fa-cog mr-1"></i>設定変更</button>
                             </div>
+                            <p class="text-[10px] text-slate-400 mt-1" id="dash-tax-summary">青色65万・2割特例・源泉考慮</p>
                         </div>
                     </div>
                 </div>
@@ -177,7 +175,17 @@
                     <div class="bg-slate-800 p-4 text-white"><h3 class="font-bold text-sm"><i class="fas fa-random text-blue-400 mr-2"></i>対象月の資金振り分け</h3></div>
                     <div class="flex items-center p-4 border-b bg-slate-50"><div><p class="text-[10px] font-bold text-slate-500">Step 1: 手元に入るお金</p><p class="flow-number font-bold font-mono text-slate-800" id="flow-income">¥0</p></div></div>
                     <div class="flex items-center p-4 border-b"><div><p class="text-[10px] font-bold text-red-500"><i class="fas fa-lock mr-1"></i>Step 2: 税金用 防衛口座へ</p><p class="flow-number font-bold font-mono text-red-600" id="flow-tax">▲ ¥0</p></div></div>
-                    <div class="flex items-center p-4 border-b"><div><p class="text-[10px] font-bold text-amber-600">Step 3: 固定費＋支出表</p><p class="flow-number font-bold font-mono text-amber-700" id="flow-fixed">▲ ¥0</p></div></div>
+                    <div class="flex items-start p-4 border-b">
+                        <div class="flex-1">
+                            <p class="text-[10px] font-bold text-amber-600">Step 3: 固定費・経費の実支払</p>
+                            <p class="flow-number font-bold font-mono text-amber-700" id="flow-fixed">▲ ¥0</p>
+                            <div class="mt-1 space-y-0.5">
+                                <p class="text-[9px] text-slate-400">実際の支払額（家賃・光熱費等の全額）</p>
+                                <p class="text-[10px] text-slate-500">うち税務上の経費計上額: <span class="font-mono font-bold text-amber-600" id="flow-fixed-deduct">¥0</span></p>
+                            </div>
+                        </div>
+                        <button onclick="switchTab('settings')" class="text-xs text-slate-400 hover:text-blue-500 mt-1 ml-2"><i class="fas fa-cog"></i></button>
+                    </div>
                     <div class="flex items-center p-4 border-b relative group">
                         <div><p class="text-[10px] font-bold text-emerald-600">Step 4: 積立（NISA/共済）</p><p class="flow-number font-bold font-mono text-emerald-700" id="flow-invest">▲ ¥0</p></div>
                         <button onclick="switchTab('settings')" class="absolute right-4 text-xs text-slate-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition"><i class="fas fa-cog"></i></button>
@@ -198,11 +206,21 @@
                         <div class="kpi-number font-extrabold font-mono" id="kpi-tax-pool">¥0</div>
                         <p class="text-[10px] text-red-200 mt-2 bg-red-800/50 inline-block px-2 py-1 rounded">源泉徴収 <span id="kpi-withheld-label">未考慮</span></p>
                     </div>
-                    <div class="bg-white border rounded-2xl p-4 sm:p-6 shadow-sm relative overflow-hidden">
+                    <div class="bg-white border rounded-2xl p-4 sm:p-5 shadow-sm relative overflow-hidden">
                         <div class="absolute -right-4 -bottom-4 text-emerald-50 opacity-50"><i class="fas fa-gift text-8xl"></i></div>
                         <h4 class="text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">ふるさと納税 上限目安</h4>
                         <div class="kpi-number font-extrabold text-slate-800 font-mono" id="kpi-furusato">¥0</div>
-                        <p class="text-[10px] text-emerald-600 mt-1 font-bold"><i class="fas fa-check mr-1"></i>税金口座から支払い可能</p>
+                        <div class="mt-2 space-y-1">
+                            <div class="flex justify-between text-[10px]">
+                                <span class="text-slate-500">今年の寄付済合計</span>
+                                <span class="font-mono font-bold text-amber-600" id="kpi-furusato-paid">¥0</span>
+                            </div>
+                            <div class="flex justify-between text-[10px]">
+                                <span class="text-emerald-600 font-bold">あと寄付できる目安</span>
+                                <span class="font-mono font-bold text-emerald-600" id="kpi-furusato-remaining">¥0</span>
+                            </div>
+                        </div>
+                        <button onclick="switchTab('settings');setTimeout(()=>document.getElementById('furusato-section').scrollIntoView({behavior:'smooth'}),200)" class="mt-2 text-[10px] text-blue-500 hover:text-blue-700 font-bold"><i class="fas fa-plus-circle mr-1"></i>寄付履歴を管理</button>
                         <p class="text-[9px] text-slate-400 mt-1 leading-tight">算出: 住民税所得割×20%÷(1-所得税率×1.021-10%)+2,000円</p>
                     </div>
                 </div>
@@ -267,7 +285,7 @@
                                 <p class="text-[8px] text-slate-400 mt-0.5 leading-tight">事業所得-290万×5%</p>
                             </div>
                             <div class="bg-slate-50 p-2 sm:p-3 rounded-lg border">
-                                <p class="text-[9px] sm:text-[10px] text-slate-500 mb-1">消費税（2割特例）</p>
+                                <p class="text-[9px] sm:text-[10px] text-slate-500 mb-1" id="fc-cons-label">消費税（2割特例）</p>
                                 <p class="font-mono font-bold text-red-600 text-xs sm:text-sm" id="fc-consumption-tax">¥0</p>
                             </div>
                         </div>
@@ -300,12 +318,16 @@
     <div id="tab-income" class="tab-content">
         <div class="flex flex-col sm:flex-row justify-between sm:items-end mb-6 border-b pb-4 gap-4">
             <div><h2 class="text-2xl sm:text-3xl font-bold text-slate-800">Income Management</h2><p class="text-xs sm:text-sm text-slate-500 mt-1">クライアントからの報酬管理</p></div>
-            <button onclick="openIncomeModal()" class="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-plus mr-2"></i>新規報酬を追加</button>
+            <div class="flex w-full sm:w-auto gap-2 flex-wrap sm:flex-nowrap">
+                <button onclick="downloadIncomeCSV()" class="w-full sm:w-auto justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-file-csv mr-2"></i>CSV出力</button>
+                <button onclick="openIncomeModal()" class="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-plus mr-2"></i>新規報酬を追加</button>
+            </div>
         </div>
         <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm resp-table" style="min-width:600px">
                     <thead><tr class="bg-slate-50 border-b text-slate-500 text-xs">
+                        <th class="p-3 w-8 text-center"><input type="checkbox" id="inc-select-all" onchange="toggleAllIncomes(this)" class="rounded border-slate-300 cursor-pointer"></th>
                         <th class="p-3 font-bold">入金日/請求日</th><th class="p-3 font-bold">クライアント/案件</th>
                         <th class="p-3 font-bold text-right">税抜</th><th class="p-3 font-bold text-right">消費税</th>
                         <th class="p-3 font-bold text-right">税込</th><th class="p-3 font-bold text-right">源泉</th>
@@ -324,6 +346,7 @@
         <div class="flex flex-col sm:flex-row justify-between sm:items-end mb-4 border-b pb-4 gap-4">
             <div><h2 class="text-2xl sm:text-3xl font-bold text-slate-800">Expense Management</h2><p class="text-xs sm:text-sm text-slate-500 mt-1">外注費・経費・交通費の月別管理</p></div>
             <div class="flex w-full sm:w-auto gap-2 flex-wrap sm:flex-nowrap">
+                <button onclick="downloadExpenseCSV()" class="w-full sm:w-auto justify-center bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-file-csv mr-2"></i>CSV出力</button>
                 <button id="btn-del-selected-exp" onclick="deleteSelectedExpenses()" disabled class="w-full sm:w-auto justify-center bg-red-50 text-red-300 px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0 transition-all cursor-not-allowed"><i class="fas fa-trash-alt mr-2"></i>選択削除(<span id="del-exp-count">0</span>)</button>
                 <button onclick="openExpenseModal()" class="w-full sm:w-auto justify-center bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-plus mr-2"></i>新規追加</button>
             </div>
@@ -343,7 +366,47 @@
 
     <!-- ==================== SETTINGS ==================== -->
     <div id="tab-settings" class="tab-content">
-        <div class="mb-6 border-b pb-4"><h2 class="text-2xl sm:text-3xl font-bold text-slate-800">Settings & Masters</h2><p class="text-xs sm:text-sm text-slate-500 mt-1">按分経費・取引先マスターの管理</p></div>
+        <div class="mb-6 border-b pb-4"><h2 class="text-2xl sm:text-3xl font-bold text-slate-800">Settings & Masters</h2><p class="text-xs sm:text-sm text-slate-500 mt-1">税務プロファイル・按分経費・取引先マスターの管理</p></div>
+
+        <!-- ⑤ 税務プロファイル（全幅） -->
+        <div class="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl shadow-lg p-6 mb-6 text-white">
+            <h3 class="font-bold text-white border-b border-slate-600 pb-3 mb-5 flex items-center justify-between">
+                <span><i class="fas fa-file-alt text-blue-400 mr-2"></i>税務プロファイル設定</span>
+                <span class="text-[10px] bg-blue-600 px-2 py-1 rounded font-bold">シミュレーションに反映</span>
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <!-- 申告方式 -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-2"><i class="fas fa-scroll mr-1 text-yellow-400"></i>申告方式</label>
+                    <div class="space-y-2">
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="filing" value="blue65" onchange="saveTaxProfile()" class="mt-0.5 accent-blue-400"><div><p class="text-sm font-bold">青色申告 65万円控除</p><p class="text-[10px] text-slate-400">e-Tax提出・複式簿記 ← おすすめ</p></div></label>
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="filing" value="blue55" onchange="saveTaxProfile()" class="mt-0.5 accent-blue-400"><div><p class="text-sm font-bold">青色申告 55万円控除</p><p class="text-[10px] text-slate-400">紙提出・複式簿記</p></div></label>
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="filing" value="blue10" onchange="saveTaxProfile()" class="mt-0.5 accent-blue-400"><div><p class="text-sm font-bold">青色申告 10万円控除</p><p class="text-[10px] text-slate-400">簡易簿記</p></div></label>
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="filing" value="white" onchange="saveTaxProfile()" class="mt-0.5 accent-blue-400"><div><p class="text-sm font-bold">白色申告</p><p class="text-[10px] text-slate-400">控除なし</p></div></label>
+                    </div>
+                </div>
+                <!-- インボイス・消費税 -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-2"><i class="fas fa-receipt mr-1 text-green-400"></i>インボイス・消費税</label>
+                    <div class="space-y-2">
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="invoice" value="exempt" onchange="saveTaxProfile()" class="mt-0.5 accent-green-400"><div><p class="text-sm font-bold">免税事業者</p><p class="text-[10px] text-slate-400">インボイス未登録・消費税納税なし</p></div></label>
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="invoice" value="reduced2" onchange="saveTaxProfile()" class="mt-0.5 accent-green-400"><div><p class="text-sm font-bold">2割特例 〜2026年</p><p class="text-[10px] text-slate-400">課税売上の2%を納税</p></div></label>
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="invoice" value="reduced3" onchange="saveTaxProfile()" class="mt-0.5 accent-green-400"><div><p class="text-sm font-bold">3割特例 2027〜2028年</p><p class="text-[10px] text-slate-400">課税売上の3%を納税（延長分）</p></div></label>
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="invoice" value="simple" onchange="saveTaxProfile()" class="mt-0.5 accent-green-400"><div><p class="text-sm font-bold">簡易課税（第5種）</p><p class="text-[10px] text-slate-400">課税売上の5%を納税</p></div></label>
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="invoice" value="full" onchange="saveTaxProfile()" class="mt-0.5 accent-green-400"><div><p class="text-sm font-bold">本則課税</p><p class="text-[10px] text-slate-400">売上税額－仕入税額控除</p></div></label>
+                    </div>
+                </div>
+                <!-- 源泉徴収 -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-2"><i class="fas fa-hand-holding-usd mr-1 text-red-400"></i>源泉徴収</label>
+                    <div class="space-y-2">
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="withholding" value="true" onchange="saveTaxProfile()" class="mt-0.5 accent-red-400"><div><p class="text-sm font-bold">考慮する</p><p class="text-[10px] text-slate-400">収入から源泉徴収分を差引き</p></div></label>
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="withholding" value="false" onchange="saveTaxProfile()" class="mt-0.5 accent-red-400"><div><p class="text-sm font-bold">考慮しない</p><p class="text-[10px] text-slate-400">総売上で計算</p></div></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="space-y-6">
                 <!-- 按分経費 -->
@@ -373,6 +436,18 @@
             </div>
 
             <div class="space-y-6">
+                <!-- ふるさと納税 -->
+                <div id="furusato-section" class="bg-white rounded-2xl shadow-sm border p-6">
+                    <div class="flex justify-between items-center border-b pb-3 mb-4">
+                        <h3 class="font-bold text-slate-800"><i class="fas fa-gift text-emerald-500 mr-2"></i>ふるさと納税 寄付履歴</h3>
+                        <button onclick="openFurusatoModal()" class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-bold hover:bg-emerald-200"><i class="fas fa-plus mr-1"></i>追加</button>
+                    </div>
+                    <div id="furusato-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                    <div class="mt-3 pt-3 border-t flex justify-between items-center bg-emerald-50 p-3 rounded-lg">
+                        <span class="text-sm font-bold text-emerald-700">今年の寄付合計</span>
+                        <span class="text-xl font-bold font-mono text-emerald-700" id="furusato-total">¥0</span>
+                    </div>
+                </div>
                 <!-- 稼働管理表 -->
                 <div class="bg-white rounded-2xl shadow-sm border p-6">
                     <div class="flex justify-between items-center border-b pb-3 mb-4">
@@ -481,6 +556,9 @@
                         <p class="text-xs text-slate-400 mt-1">JPG PNG HEIC 複数枚OK</p>
                         <div id="file-list" class="mt-4 flex flex-wrap gap-2 justify-center"></div>
                     </div>
+                    <div class="flex items-center gap-3 justify-center">
+                        <button onclick="openDrivePicker('rc')" class="text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-full font-bold flex items-center gap-1.5 shadow-sm"><img src="https://www.google.com/favicon.ico" class="w-3.5 h-3.5">Googleドライブから選択</button>
+                    </div>
                     <div class="flex justify-center">
                         <button id="btn-analyze" onclick="analyzeReceipts()" disabled class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-full shadow-md flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-magic mr-2"></i>レシートをAI解析</button>
                     </div>
@@ -524,6 +602,9 @@
                         <p class="font-bold text-slate-600 text-sm">ドロップ / クリック</p>
                         <p class="text-xs text-slate-400 mt-1">出前館・Uber Eats等の領収書スクショ 複数枚OK</p>
                         <div id="file-list-dv" class="mt-4 flex flex-wrap gap-2 justify-center"></div>
+                    </div>
+                    <div class="flex items-center gap-3 justify-center">
+                        <button onclick="openDrivePicker('dv')" class="text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-full font-bold flex items-center gap-1.5 shadow-sm"><img src="https://www.google.com/favicon.ico" class="w-3.5 h-3.5">Googleドライブから選択</button>
                     </div>
                     <div class="flex justify-center">
                         <button id="btn-analyze-dv" onclick="analyzeDelivery()" disabled class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-8 rounded-full shadow-md flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-magic mr-2"></i>デリバリーレシートを解析</button>
@@ -571,6 +652,9 @@
                         <p class="text-xs text-slate-400 mt-1">Amazon領収書PDF・スクショ 複数枚OK</p>
                         <div id="file-list-sc" class="mt-4 flex flex-wrap gap-2 justify-center"></div>
                     </div>
+                    <div class="flex items-center gap-3 justify-center">
+                        <button onclick="openDrivePicker('sc')" class="text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-full font-bold flex items-center gap-1.5 shadow-sm"><img src="https://www.google.com/favicon.ico" class="w-3.5 h-3.5">Googleドライブから選択</button>
+                    </div>
                     <div class="flex justify-center">
                         <button id="btn-analyze-sc" onclick="analyzeSupplies()" disabled class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-full shadow-md flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-magic mr-2"></i>消耗品費レシートを解析</button>
                     </div>
@@ -608,6 +692,7 @@
                                 <i class="fas fa-image text-2xl text-slate-400 mb-2"></i><p class="text-xs font-bold text-slate-600">スクショ等</p>
                                 <div id="file-list-tr" class="mt-2 flex flex-wrap gap-1 justify-center"></div>
                             </div>
+                            <button onclick="openDrivePicker('tr')" class="mt-2 w-full text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded-lg font-bold flex items-center justify-center gap-1.5"><img src="https://www.google.com/favicon.ico" class="w-3.5 h-3.5">Googleドライブから選択</button>
                         </div>
                         <div><label class="block text-xs font-bold text-slate-500 mb-2">② テキスト貼り付け</label>
                             <textarea id="tr-text-input" class="w-full border rounded-lg p-2 text-xs h-[120px] resize-none focus:outline-none focus:ring-1 focus:ring-teal-500" placeholder="コピーした履歴を貼り付け..."></textarea>
@@ -720,6 +805,27 @@
     </div>
 </div>
 
+<!-- ===== FURUSATO MODAL ===== -->
+<div id="furusato-modal" class="modal-bg z-[90]">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm flex flex-col m-4">
+        <div class="bg-emerald-700 px-5 py-4 flex justify-between items-center rounded-t-2xl">
+            <h3 class="font-bold text-white"><i class="fas fa-gift mr-2"></i>ふるさと納税 寄付を記録</h3>
+            <button onclick="closeFurusatoModal()" class="text-emerald-200 hover:text-white"><i class="fas fa-times text-xl"></i></button>
+        </div>
+        <div class="p-5 space-y-4 text-sm">
+            <input type="hidden" id="fur-id">
+            <div><label class="block font-bold text-slate-700 mb-1">寄付日</label><input type="date" id="fur-date" class="w-full border rounded p-2"></div>
+            <div><label class="block font-bold text-slate-700 mb-1">自治体名</label><input type="text" id="fur-city" class="w-full border rounded p-2" placeholder="〇〇市・〇〇町"></div>
+            <div><label class="block font-bold text-slate-700 mb-1">返礼品</label><input type="text" id="fur-item" class="w-full border rounded p-2" placeholder="〇〇牛 2kg など"></div>
+            <div><label class="block font-bold text-slate-700 mb-1">寄付金額</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="fur-amount" class="w-full border rounded p-2 pl-8 font-mono" placeholder="10000"></div></div>
+        </div>
+        <div class="bg-slate-50 px-5 py-4 flex justify-end gap-3 border-t rounded-b-2xl">
+            <button onclick="closeFurusatoModal()" class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded">キャンセル</button>
+            <button onclick="saveFurusatoEntry()" class="px-4 py-2 text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700 rounded shadow"><i class="fas fa-save mr-1"></i>保存</button>
+        </div>
+    </div>
+</div>
+
 <!-- Confirm Modal -->
 <div id="confirm-modal" class="modal-bg z-[100]">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm m-4 flex flex-col overflow-hidden">
@@ -752,7 +858,16 @@
 'use strict';
 const STORAGE_KEY='cr_erp_v5';
 const API_KEY='';
-const DEF={settings:{apportion:[{id:'rent',name:'家賃',ratio:10,defaultAmount:129000},{id:'util',name:'水光熱費',ratio:20,defaultAmount:10000},{id:'phone',name:'通信費・スマホ代',ratio:50,defaultAmount:8000}],kyosai:70000,nisa:50000,ideco:0,subs:[],externalTools:[{name:'Google Drive',url:'https://drive.google.com/'}],workTables:[{name:'株式会社アイ・ファクトリー',url:'https://docs.google.com/spreadsheets/d/1GOf5BfvJQXjpmZXhzeDb_eLJsppWs8vqyW6rMDxjDkk/edit?pli=1&gid=325275437#gid=325275437'},{name:'株式会社A1Growth',url:'https://docs.google.com/spreadsheets/d/1ToDjuYoWjBuGSb-xkHVYKB3yd5K21GpZHAM2alnKxAQ/edit?gid=1604662573#gid=1604662573'}],memo:'',geminiApiKey:'',withholding:true},monthlyCosts:{},clients:['株式会社A1Growth','株式会社BLAM','株式会社アイ・ファクトリー'],payees:['アイレントホーム株式会社','Octopus Energy','モバイルSuica'],incomes:[],expenses:[],receiptHistory:[],dashMode:'auto',lastUpdated:null};
+const DEF={settings:{apportion:[{id:'rent',name:'家賃',ratio:10,defaultAmount:129000},{id:'util',name:'水光熱費',ratio:20,defaultAmount:10000},{id:'phone',name:'通信費・スマホ代',ratio:50,defaultAmount:8000}],kyosai:70000,nisa:50000,ideco:0,subs:[],externalTools:[{name:'Google Drive',url:'https://drive.google.com/'}],workTables:[{name:'株式会社アイ・ファクトリー',url:'https://docs.google.com/spreadsheets/d/1GOf5BfvJQXjpmZXhzeDb_eLJsppWs8vqyW6rMDxjDkk/edit?pli=1&gid=325275437#gid=325275437'},{name:'株式会社A1Growth',url:'https://docs.google.com/spreadsheets/d/1ToDjuYoWjBuGSb-xkHVYKB3yd5K21GpZHAM2alnKxAQ/edit?gid=1604662573#gid=1604662573'}],memo:'',geminiApiKey:'',withholding:true,
+    // ⑤ 税務プロファイル
+    taxProfile:{
+        filingType:'blue65',    // blue65 / blue55 / blue10 / white
+        invoiceType:'reduced2', // exempt / reduced2 / reduced3 / simple / full
+        withholding:true
+    }},
+    // ① ふるさと納税履歴
+    furusato:[],
+    monthlyCosts:{},clients:['株式会社A1Growth','株式会社BLAM','株式会社アイ・ファクトリー'],payees:['アイレントホーム株式会社','Octopus Energy','モバイルSuica'],incomes:[],expenses:[],receiptHistory:[],dashMode:'auto',lastUpdated:null};
 let S=JSON.parse(JSON.stringify(DEF));
 let expFilter='all',rcFiles=[],trFiles=[],dvFiles=[],scFiles=[];
 let monthlyChart=null,cumulativeChart=null;
@@ -773,6 +888,9 @@ function migrate(d){
     if(!Array.isArray(s.settings.workTables))s.settings.workTables=b.settings.workTables;
     if(s.settings.geminiApiKey===undefined)s.settings.geminiApiKey='';
     if(s.settings.withholding===undefined)s.settings.withholding=true;
+    if(!s.settings.taxProfile)s.settings.taxProfile={...b.settings.taxProfile};
+    else s.settings.taxProfile={...b.settings.taxProfile,...s.settings.taxProfile};
+    if(!Array.isArray(s.furusato))s.furusato=[];
     if(!s.monthlyCosts)s.monthlyCosts={};
     if(!Array.isArray(s.clients))s.clients=b.clients;
     if(!Array.isArray(s.payees))s.payees=b.payees;
@@ -789,21 +907,22 @@ window.addEventListener('DOMContentLoaded',()=>{
     renderAll();
     initDD();
     initPaste();
+    loadGapiAndGis();
 });
 function renderAll(){
     document.getElementById('quick-memo').value=S.settings.memo||'';
-    document.getElementById('dash-withholding').checked=S.settings.withholding!==false;
     updateLastUpdatedLabel();
     renderSettings();
     renderMasterLists();
     renderIncome();
     renderExpense();
     renderReceiptHistory();
+    renderFurusato();
     dashMonthChanged();
     setDashMode(S.dashMode,false);
 }
 function saveMemo(){S.settings.memo=document.getElementById('quick-memo').value;save();}
-function onWithholdingChange(){S.settings.withholding=document.getElementById('dash-withholding').checked;save();runSimulation();}
+function onWithholdingChange(){/* handled via taxProfile */}
 function gotoApiSettings(){switchTab('settings');setTimeout(()=>{const el=document.getElementById('set-api-key');if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.focus();el.classList.add('bg-yellow-50','border-yellow-400','ring-4','ring-yellow-200');setTimeout(()=>{el.classList.remove('bg-yellow-50','border-yellow-400','ring-4','ring-yellow-200');el.classList.add('bg-slate-50','border-slate-200');},2000);}},100);}
 function switchTab(id){
     document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));
@@ -827,10 +946,22 @@ function dashMonthChanged(){
     S.settings.apportion.forEach(app=>{
         let val=S.monthlyCosts[month][app.id];
         if(val===undefined)val=app.defaultAmount;
-        const calc=Math.floor(val*(app.ratio/100));
+        const deduct=Math.floor(val*(app.ratio/100));
         const div=document.createElement('div');
         div.className='flex items-center gap-3 bg-white p-3 rounded-lg border border-indigo-100 shadow-sm';
-        div.innerHTML=`<div class="w-1/3 min-w-0"><p class="text-xs font-bold text-slate-600 truncate">${app.name}</p><p class="text-[10px] text-slate-400">経費率:${app.ratio}%</p></div><div class="w-1/3 relative"><span class="absolute left-2 top-2 text-slate-400 text-xs">¥</span><input type="number" value="${val}" class="w-full border rounded p-1.5 pl-6 font-mono text-sm" oninput="saveMonthlyCost('${app.id}',this.value)"></div><div class="w-1/3 text-right"><p class="text-[10px] text-slate-500">経費合算</p><p class="font-bold font-mono text-indigo-700 text-sm" id="dc-${app.id}">¥${calc.toLocaleString()}</p></div>`;
+        div.innerHTML=`<div class="w-[38%] min-w-0">
+            <p class="text-xs font-bold text-slate-700 truncate">${app.name}</p>
+            <p class="text-[10px] text-slate-400">事業利用率: <span class="font-bold text-indigo-600">${app.ratio}%</span></p>
+        </div>
+        <div class="w-[35%] relative">
+            <span class="absolute left-2 top-2 text-slate-400 text-xs">¥</span>
+            <input type="number" value="${val}" class="w-full border rounded p-1.5 pl-6 font-mono text-sm" oninput="saveMonthlyCost('${app.id}',this.value)" placeholder="実支払額">
+            <p class="text-[9px] text-slate-400 mt-0.5">実際の支払額</p>
+        </div>
+        <div class="flex-1 text-right">
+            <p class="text-[9px] text-slate-500">経費計上額</p>
+            <p class="font-bold font-mono text-indigo-700 text-sm" id="dc-${app.id}">¥${deduct.toLocaleString()}</p>
+        </div>`;
         cont.appendChild(div);
     });
     runSimulation();
@@ -874,17 +1005,38 @@ function updatePieCharts(monthData,accumData){
 }
 
 function runSimulation(){
+    const tp=S.settings.taxProfile||{filingType:'blue65',invoiceType:'reduced2',withholding:true};
+    const wh=tp.withholding!==false;
+    // Deduction by filing type
+    const dedMap={blue65:650000,blue55:550000,blue10:100000,white:0};
+    const ded=dedMap[tp.filingType]||650000;
+    // Consumption tax rate by invoice type
+    const consRateMap={exempt:0,reduced2:0.02,reduced3:0.03,simple:0.05,full:0.1};
+    const consRate=consRateMap[tp.invoiceType]||0.02;
+    const consLabel={exempt:'消費税（免税）',reduced2:'消費税（2割特例）',reduced3:'消費税（3割特例）',simple:'消費税（簡易課税）',full:'消費税（本則課税）'};
+    const consEl=document.getElementById('fc-cons-label');if(consEl)consEl.textContent=consLabel[tp.invoiceType]||'消費税';
+
     const mode=S.dashMode,month=document.getElementById('dash-month').value;
-    let rev=0,exp=0,revAccum=0,expAccum=0,revY=0,expY=0,targetMonthNum=1;
+    let rev=0,exp=0,expActual=0,expDeductOnly=0;
+    let revAccum=0,expAccum=0,revY=0,expY=0,targetMonthNum=1;
     if(month)targetMonthNum=parseInt(month.split('-')[1],10);
+
     if(mode==='auto'){
         if(month){
             const[yStr,mStr]=month.split('-');const year=parseInt(yStr,10);
             rev=S.incomes.filter(i=>{const d=i.reqDate||i.payDate||'';return d.startsWith(month);}).reduce((s,i)=>s+Number(i.net||i.total||0),0);
-            let appT=0;S.settings.apportion.forEach(a=>{let v=S.monthlyCosts[month]?.[a.id];if(v===undefined)v=a.defaultAmount;appT+=Math.floor(Number(v)*(a.ratio/100));});
+            // C案: 按分は実額を支払、うち経費割合分のみ経費計上
+            let appActual=0,appDeduct=0;
+            S.settings.apportion.forEach(a=>{
+                let v=S.monthlyCosts[month]?.[a.id];if(v===undefined)v=a.defaultAmount;
+                appActual+=Number(v);
+                appDeduct+=Math.floor(Number(v)*(a.ratio/100));
+            });
             const subT=S.settings.subs.reduce((s,c)=>s+Number(c.amount||0),0);
             const varE=S.expenses.filter(e=>e.payDate&&e.payDate.startsWith(month)).reduce((s,e)=>s+Number(e.net||e.total||0),0);
-            exp=appT+subT+varE;
+            expActual=appActual+subT+varE;
+            expDeductOnly=appDeduct+subT+varE;
+            exp=expDeductOnly; // 税務上の経費
             let appTAccum=0,varEAccum=0;
             for(let mm=1;mm<=targetMonthNum;mm++){
                 const mKey=`${year}-${String(mm).padStart(2,'0')}`;
@@ -892,25 +1044,35 @@ function runSimulation(){
                 varEAccum+=S.expenses.filter(e=>e.payDate&&e.payDate.startsWith(mKey)).reduce((s,e)=>s+Number(e.net||e.total||0),0);
                 S.settings.apportion.forEach(a=>{let v=S.monthlyCosts[mKey]?.[a.id];if(v===undefined)v=a.defaultAmount;appTAccum+=Math.floor(Number(v)*(a.ratio/100));});
             }
-            expAccum=appTAccum+varEAccum+subT*targetMonthNum;
+            expAccum=appTAccum+varEAccum+(S.settings.subs.reduce((s,c)=>s+Number(c.amount||0),0))*targetMonthNum;
             revY=Math.floor((revAccum/targetMonthNum)*12);expY=Math.floor((expAccum/targetMonthNum)*12);
         }
     }else{
-        rev=Number(document.getElementById('dash-revenue').value)||0;exp=Number(document.getElementById('dash-expense').value)||0;
+        rev=Number(document.getElementById('dash-revenue').value)||0;
+        exp=Number(document.getElementById('dash-expense').value)||0;
+        expActual=exp;expDeductOnly=exp;
         revAccum=rev*targetMonthNum;expAccum=exp*targetMonthNum;revY=rev*12;expY=exp*12;
     }
-    document.getElementById('dash-revenue').value=rev;document.getElementById('dash-expense').value=exp;
+    document.getElementById('dash-revenue').value=rev;
+    document.getElementById('dash-expense').value=expDeductOnly;
+
+    // C案: Step3に実際支払額と経費計上額を表示
+    const flowFixed=document.getElementById('flow-fixed');
+    const flowFixedDeduct=document.getElementById('flow-fixed-deduct');
+    if(flowFixed)flowFixed.textContent=`▲ ${fmt(expActual||exp)}`;
+    if(flowFixedDeduct)flowFixedDeduct.textContent=fmt(expDeductOnly||exp);
+
     const accM=document.getElementById('fc-accum-months');if(accM)accM.textContent=targetMonthNum;
     const accR=document.getElementById('fc-accum-revenue');if(accR)accR.textContent=fmt(revAccum);
     const accE=document.getElementById('fc-accum-expense');if(accE)accE.textContent=fmt(expAccum);
     const lbl=document.getElementById('fc-logic-label');
     if(lbl)lbl.textContent=mode==='auto'?`1〜${targetMonthNum}月までの平均×12で算出`:'入力値×12で算出';
     const cl=document.getElementById('chart-accum-label');if(cl)cl.textContent=targetMonthNum;
-    const wh=document.getElementById('dash-withholding').checked;
+
     const ky=(S.settings.kyosai||0)*12,id2=(S.settings.ideco||0)*12;
     const biz=Math.max(0,revY-expY);
     const hlth=Math.min(1060000,Math.max(0,(biz-430000)*0.1+150000));
-    const taxable=Math.max(0,biz-650000-480000-16980*12-hlth-ky-id2);
+    const taxable=Math.max(0,biz-ded-480000-16980*12-hlth-ky-id2);
     let it=0;
     if(taxable<=1950000)it=taxable*.05;
     else if(taxable<=3300000)it=taxable*.1-97500;
@@ -921,14 +1083,22 @@ function runSimulation(){
     it=Math.max(0,it)*1.021;
     let whM=0,whY=0;
     if(wh){whM=rev<=1000000?rev*.1021:1000000*.1021+(rev-1000000)*.2042;whY=revY<=1000000?revY*.1021:1000000*.1021+(revY-1000000)*.2042;}
-    const res=Math.max(0,taxable*.1)+5000,ent=Math.max(0,(biz-2900000)*.05),cons=revY*.1*.2;
+    const res=Math.max(0,taxable*.1)+5000,ent=Math.max(0,(biz-2900000)*.05),cons=revY*.1*consRate;
     let rate=.05;
     if(taxable>18000000)rate=.4;else if(taxable>9000000)rate=.33;else if(taxable>6950000)rate=.23;else if(taxable>3300000)rate=.2;else if(taxable>1950000)rate=.1;
     const fd=1-.1-(rate*1.021);
     const fur=fd>0?Math.max(0,(taxable*.1*.2)/fd+2000):0;
     const remIt=Math.max(0,it-whY),totTax=remIt+res+hlth+16980*12+ent+cons,pool=totTax/12;
+
+    // ふるさと納税：今年の寄付済み合計
+    const thisYear=new Date().getFullYear();
+    const furPaid=S.furusato.filter(f=>f.date&&f.date.startsWith(String(thisYear))).reduce((s,f)=>s+Number(f.amount||0),0);
+    const furRemain=Math.max(0,fur-furPaid);
+
     document.getElementById('kpi-tax-pool').textContent=fmt(pool);
     document.getElementById('kpi-furusato').textContent=fmt(fur);
+    document.getElementById('kpi-furusato-paid').textContent=fmt(furPaid);
+    document.getElementById('kpi-furusato-remaining').textContent=fmt(furRemain);
     document.getElementById('kpi-withheld-label').textContent=wh?'考慮済':'未考慮';
     const fcRevEl=document.getElementById('fc-revenue');if(fcRevEl)fcRevEl.textContent=fmt(revY);
     document.getElementById('fc-income-tax').textContent=fmt(remIt);
@@ -936,39 +1106,44 @@ function runSimulation(){
     document.getElementById('fc-enterprise-tax').textContent=fmt(ent);
     document.getElementById('fc-consumption-tax').textContent=fmt(cons);
     document.getElementById('fc-total-tax').textContent=fmt(totTax);
-    // Bar chart with amounts
+
+    // Bar chart
     const pT=Math.min(revY>0?(totTax/revY)*100:0,100),pE=Math.min(revY>0?(expY/revY)*100:0,100),pI=Math.max(0,100-pT-pE);
     document.getElementById('bar-tax').style.width=`${pT}%`;document.getElementById('bar-expense').style.width=`${pE}%`;document.getElementById('bar-income').style.width=`${pI}%`;
     const takehome=Math.max(0,revY-expY-totTax);
     const bia=document.getElementById('bar-income-amt');if(bia)bia.textContent=fmt(takehome);
     const bea=document.getElementById('bar-expense-amt');if(bea)bea.textContent=fmt(expY);
     const bta=document.getElementById('bar-tax-amt');if(bta)bta.textContent=fmt(totTax);
+
     // Cash flow
-    const net=wh?rev-whM:rev,inv=(S.settings.kyosai||0)+(S.settings.nisa||0)+(S.settings.ideco||0),free=net-pool-exp-inv;
+    const net=wh?rev-whM:rev,inv=(S.settings.kyosai||0)+(S.settings.nisa||0)+(S.settings.ideco||0),free=net-pool-(expActual||exp)-inv;
     document.getElementById('flow-income').textContent=fmt(net);
     document.getElementById('flow-tax').textContent=`▲ ${fmt(pool)}`;
-    document.getElementById('flow-fixed').textContent=`▲ ${fmt(exp)}`;
     document.getElementById('flow-invest').textContent=`▲ ${fmt(inv)}`;
     const fEl=document.getElementById('flow-free');
     fEl.textContent=fmt(free);
     fEl.className=`kpi-number-lg font-extrabold font-mono ${free<0?'text-red-300':'text-white'}`;
-    // Pie charts - 4 slices: 手取り / 経費 / 税社保 / 積立
+
+    // Profile badge + dash summary
+    const filingLabel={blue65:'青色65万',blue55:'青色55万',blue10:'青色10万',white:'白色'};
+    const invoiceLabel={exempt:'免税',reduced2:'2割特例',reduced3:'3割特例',simple:'簡易課税',full:'本則課税'};
+    const badge=document.getElementById('profile-badge');
+    if(badge)badge.textContent=`CD / インボイス${invoiceLabel[tp.invoiceType]||''} / ${filingLabel[tp.filingType]||''}`;
+    const sum=document.getElementById('dash-tax-summary');
+    if(sum)sum.textContent=`${filingLabel[tp.filingType]||''}・${invoiceLabel[tp.invoiceType]||''}・源泉${wh?'考慮':'未考慮'}`;
+
+    // Pie charts
     const mNetRev=wh?rev-whM:rev;
-    const mInvest=Math.max(0,inv);
-    const mPool=Math.max(0,pool);
-    const mExp=Math.max(0,exp);
+    const mInvest=Math.max(0,inv),mPool=Math.max(0,pool),mExp=Math.max(0,exp);
     const mTakehome=Math.max(0,mNetRev-mExp-mPool-mInvest);
-    // Cumulative
     const accumRevNet=wh?revAccum-whY*(targetMonthNum/12):revAccum;
     const accumTax=Math.max(0,totTax*(targetMonthNum/12));
     const accumInvest=Math.max(0,mInvest*targetMonthNum);
     const accumExp=Math.max(0,expAccum);
     const accumTakehome=Math.max(0,accumRevNet-accumExp-accumTax-accumInvest);
-    updatePieCharts(
-        [mTakehome, mExp, mPool, mInvest],
-        [accumTakehome, accumExp, accumTax, accumInvest]
-    );
+    updatePieCharts([mTakehome,mExp,mPool,mInvest],[accumTakehome,accumExp,accumTax,accumInvest]);
 }
+
 
 // ===== SETTINGS =====
 function renderSettings(){
@@ -976,13 +1151,25 @@ function renderSettings(){
     document.getElementById('set-nisa').value=S.settings.nisa||0;
     document.getElementById('set-ideco').value=S.settings.ideco||0;
     document.getElementById('set-api-key').value=S.settings.geminiApiKey||'';
+    // Tax profile radios
+    const tp=S.settings.taxProfile||{};
+    document.querySelectorAll('[name="filing"]').forEach(r=>r.checked=r.value===(tp.filingType||'blue65'));
+    document.querySelectorAll('[name="invoice"]').forEach(r=>r.checked=r.value===(tp.invoiceType||'reduced2'));
+    document.querySelectorAll('[name="withholding"]').forEach(r=>r.checked=r.value===String(tp.withholding!==false));
     const al=document.getElementById('apportion-list');al.innerHTML='';
     S.settings.apportion.forEach((a,i)=>{
         const div=document.createElement('div');div.className='bg-slate-50 p-3 rounded-lg border flex flex-wrap gap-2 items-end';
-        div.innerHTML=`<div class="flex-1 min-w-[100px]"><label class="block text-xs font-bold text-slate-500 mb-1">項目名</label><input type="text" value="${a.name}" class="w-full border rounded p-1.5 text-sm font-bold" onchange="updateApportion(${i},'name',this.value)"></div><div class="flex-1 min-w-[80px]"><label class="block text-xs font-bold text-slate-500 mb-1">目安額 ¥</label><input type="number" value="${a.defaultAmount}" class="w-full border rounded p-1.5 font-mono text-sm" onchange="updateApportion(${i},'defaultAmount',this.value)"></div><div class="w-16"><label class="block text-xs font-bold text-slate-500 mb-1">割合 %</label><input type="number" value="${a.ratio}" class="w-full border rounded p-1.5 font-mono text-sm" onchange="updateApportion(${i},'ratio',this.value)"></div><button onclick="deleteApportion(${i})" class="text-red-400 hover:text-red-600 p-2"><i class="fas fa-trash"></i></button>`;
+        div.innerHTML=`<div class="flex-1 min-w-[100px]"><label class="block text-xs font-bold text-slate-500 mb-1">項目名</label><input type="text" value="${a.name}" class="w-full border rounded p-1.5 text-sm font-bold" onchange="updateApportion(${i},'name',this.value)"></div><div class="flex-1 min-w-[80px]"><label class="block text-xs font-bold text-slate-500 mb-1">目安額（実支払）¥</label><input type="number" value="${a.defaultAmount}" class="w-full border rounded p-1.5 font-mono text-sm" onchange="updateApportion(${i},'defaultAmount',this.value)"></div><div class="w-16"><label class="block text-xs font-bold text-slate-500 mb-1">経費率%</label><input type="number" value="${a.ratio}" class="w-full border rounded p-1.5 font-mono text-sm" onchange="updateApportion(${i},'ratio',this.value)"></div><button onclick="deleteApportion(${i})" class="text-red-400 hover:text-red-600 p-2"><i class="fas fa-trash"></i></button>`;
         al.appendChild(div);
     });
     renderTools();renderSubs();renderWorkTables();
+}
+function saveTaxProfile(){
+    const ft=document.querySelector('[name="filing"]:checked')?.value||'blue65';
+    const it=document.querySelector('[name="invoice"]:checked')?.value||'reduced2';
+    const wh=document.querySelector('[name="withholding"]:checked')?.value!=='false';
+    S.settings.taxProfile={filingType:ft,invoiceType:it,withholding:wh};
+    save();runSimulation();
 }
 function addApportion(){S.settings.apportion.push({id:'a'+Date.now(),name:'新規項目',ratio:10,defaultAmount:5000});save();renderSettings();dashMonthChanged();}
 function updateApportion(i,k,v){S.settings.apportion[i][k]=(k==='ratio'||k==='defaultAmount')?Number(v):v;save();dashMonthChanged();}
@@ -1036,6 +1223,41 @@ function deleteSub(i){S.settings.subs.splice(i,1);save();renderSubs();runSimulat
 function renderMasterLists(){const cL=document.getElementById('client-master-list'),pL=document.getElementById('payee-master-list'),dC=document.getElementById('client-list'),dP=document.getElementById('payee-list');cL.innerHTML='';pL.innerHTML='';dC.innerHTML='';dP.innerHTML='';S.clients.forEach((c,i)=>{cL.innerHTML+=`<span class="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded border border-blue-100 flex items-center gap-1">${c}<button onclick="deleteMaster('clients',${i})" class="text-blue-400 hover:text-red-500"><i class="fas fa-times"></i></button></span>`;dC.innerHTML+=`<option value="${c}">`;});S.payees.forEach((p,i)=>{pL.innerHTML+=`<span class="bg-red-50 text-red-700 text-xs px-2 py-1 rounded border border-red-100 flex items-center gap-1">${p}<button onclick="deleteMaster('payees',${i})" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button></span>`;dP.innerHTML+=`<option value="${p}">`;});}
 function addMaster(type,id){const v=document.getElementById(id).value.trim();if(v&&!S[type].includes(v)){S[type].push(v);document.getElementById(id).value='';save();renderMasterLists();}}
 function deleteMaster(type,i){S[type].splice(i,1);save();renderMasterLists();}
+// ===== ふるさと納税 =====
+function renderFurusato(){
+    const list=document.getElementById('furusato-list');
+    const tot=document.getElementById('furusato-total');
+    if(!list)return;
+    list.innerHTML='';
+    const thisYear=new Date().getFullYear();
+    const items=[...S.furusato].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    if(!items.length){list.innerHTML='<p class="text-xs text-slate-400 text-center py-4">寄付履歴がありません</p>';if(tot)tot.textContent=fmt(0);return;}
+    let total=0;
+    items.forEach((f,i)=>{
+        if(f.date&&f.date.startsWith(String(thisYear)))total+=Number(f.amount||0);
+        const div=document.createElement('div');
+        div.className='flex items-center gap-2 bg-slate-50 border rounded-lg p-2.5 text-xs';
+        div.innerHTML=`<div class="flex-1 min-w-0"><p class="font-bold text-slate-700 truncate">${f.city||''}${f.item?` · <span class="text-slate-500 font-normal">${f.item}</span>`:''}</p><p class="text-slate-400">${f.date||''}</p></div><p class="font-mono font-bold text-emerald-700 shrink-0">${fmt(f.amount)}</p><button onclick="deleteFurusato(${i})" class="text-red-300 hover:text-red-500 shrink-0"><i class="fas fa-trash text-xs"></i></button>`;
+        list.appendChild(div);
+    });
+    if(tot)tot.textContent=fmt(total);
+}
+function openFurusatoModal(id=null){
+    document.getElementById('furusato-modal').classList.add('open');
+    ['fur-id','fur-date','fur-city','fur-item','fur-amount'].forEach(k=>document.getElementById(k).value='');
+    document.getElementById('fur-date').value=new Date().toISOString().split('T')[0];
+    if(id!==null){const f=S.furusato[id];if(f){document.getElementById('fur-id').value=id;document.getElementById('fur-date').value=f.date||'';document.getElementById('fur-city').value=f.city||'';document.getElementById('fur-item').value=f.item||'';document.getElementById('fur-amount').value=f.amount||'';}}
+}
+function closeFurusatoModal(){document.getElementById('furusato-modal').classList.remove('open');}
+function saveFurusatoEntry(){
+    const id=document.getElementById('fur-id').value;
+    const entry={date:document.getElementById('fur-date').value,city:document.getElementById('fur-city').value,item:document.getElementById('fur-item').value,amount:Number(document.getElementById('fur-amount').value)||0};
+    if(!entry.city||!entry.amount){customAlert('自治体名と金額は必須です','error');return;}
+    if(id!==''){S.furusato[Number(id)]=entry;}else{S.furusato.push(entry);}
+    save();closeFurusatoModal();renderFurusato();runSimulation();
+}
+function deleteFurusato(i){customConfirm('この寄付履歴を削除しますか？',()=>{S.furusato.splice(i,1);save();renderFurusato();runSimulation();});}
+
 function exportData(){const a=document.createElement('a');a.href='data:text/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(S));a.download='cr_erp_backup_'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();}
 function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{S=migrate(JSON.parse(ev.target.result));save();renderAll();customAlert('復元しました！','success');}catch{customAlert('読込エラー','error');}e.target.value='';};r.readAsText(f);}
 
@@ -1050,7 +1272,27 @@ function closeAlert(){document.getElementById('alert-modal').classList.remove('o
 async function downloadPage(type){const activeTab=document.querySelector('.tab-content.active');if(!activeTab)return;activeTab.style.background='#f8fafc';activeTab.style.padding='20px';try{const canvas=await html2canvas(activeTab,{scale:2,useCORS:true,backgroundColor:'#f8fafc'});activeTab.style.background='';activeTab.style.padding='';if(type==='png'){const link=document.createElement('a');link.download=`CR_ERP_Export_${new Date().toISOString().slice(0,10)}.png`;link.href=canvas.toDataURL('image/png');link.click();}else if(type==='pdf'){const{jsPDF}=window.jspdf;const imgData=canvas.toDataURL('image/png');const pdf=new jsPDF({orientation:'p',unit:'mm',format:'a4'});const pdfWidth=pdf.internal.pageSize.getWidth();const pdfHeight=(canvas.height*pdfWidth)/canvas.width;pdf.addImage(imgData,'PNG',0,0,pdfWidth,pdfHeight);pdf.save(`CR_ERP_Export_${new Date().toISOString().slice(0,10)}.pdf`);}}catch(e){console.error(e);customAlert('出力に失敗しました。','error');}}
 
 // ===== INCOME =====
-function renderIncome(){const tb=document.getElementById('income-body'),em=document.getElementById('income-empty');tb.innerHTML='';if(!S.incomes.length){em.classList.remove('hidden');return;}em.classList.add('hidden');[...S.incomes].sort((a,b)=>(b.payDate||'').localeCompare(a.payDate||'')).forEach(p=>{const badge=p.status==='入金済'?`<button onclick="toggleIncomeStatus('${p.id}')" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2 py-1 rounded text-xs font-bold border border-emerald-200 transition-colors shadow-sm"><i class="fas fa-check mr-1"></i>入金済</button>`:p.status==='請求済'?`<button onclick="toggleIncomeStatus('${p.id}')" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded text-xs font-bold border border-blue-200 transition-colors shadow-sm">請求済</button>`:`<button onclick="toggleIncomeStatus('${p.id}')" class="bg-amber-100 hover:bg-amber-200 text-amber-700 px-2 py-1 rounded text-xs font-bold border border-amber-200 transition-colors shadow-sm">未請求</button>`;const linkHtml=p.link?`<a href="${p.link}" target="_blank" class="text-blue-500 hover:text-blue-700 ml-1 inline-flex items-center" title="請求書を開く"><i class="fas fa-external-link-alt text-[10px]"></i></a>`:'';const tr=document.createElement('tr');tr.className='hover:bg-slate-50';tr.innerHTML=`<td class="p-3 whitespace-nowrap"><p class="font-bold text-xs">${p.payDate||'-'}</p><p class="text-[10px] text-slate-500">請:${p.reqDate||'-'}</p></td><td class="p-3"><p class="font-bold text-xs">${p.client||''}</p><p class="text-xs text-slate-500 flex items-center">${p.title||''}${linkHtml}</p></td><td class="p-3 font-mono text-right text-slate-600 text-xs">${fmt(p.amount)}</td><td class="p-3 font-mono text-right text-slate-500 text-xs">${fmt(p.tax)}</td><td class="p-3 font-mono text-right font-bold text-xs">${fmt(p.total)}</td><td class="p-3 font-mono text-right text-red-500 text-xs">▲${fmt(p.withholding)}</td><td class="p-3 font-mono text-right font-bold text-emerald-700 bg-emerald-50/50 text-xs">${fmt(p.net)}</td><td class="p-3 text-center">${badge}</td><td class="p-3 text-center whitespace-nowrap"><button onclick="dupIncome('${p.id}')" class="text-emerald-500 hover:text-emerald-700 mx-1" title="複製"><i class="fas fa-copy"></i></button><button onclick="openIncomeModal('${p.id}')" class="text-slate-400 hover:text-slate-700 mx-1"><i class="fas fa-edit"></i></button><button onclick="delIncome('${p.id}')" class="text-red-300 hover:text-red-600 mx-1"><i class="fas fa-trash"></i></button></td>`;tb.appendChild(tr);});}
+function renderIncome(){const tb=document.getElementById('income-body'),em=document.getElementById('income-empty');tb.innerHTML='';if(!S.incomes.length){em.classList.remove('hidden');return;}em.classList.add('hidden');[...S.incomes].sort((a,b)=>(b.payDate||'').localeCompare(a.payDate||'')).forEach(p=>{const badge=p.status==='入金済'?`<button onclick="toggleIncomeStatus('${p.id}')" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2 py-1 rounded text-xs font-bold border border-emerald-200 transition-colors shadow-sm"><i class="fas fa-check mr-1"></i>入金済</button>`:p.status==='請求済'?`<button onclick="toggleIncomeStatus('${p.id}')" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded text-xs font-bold border border-blue-200 transition-colors shadow-sm">請求済</button>`:`<button onclick="toggleIncomeStatus('${p.id}')" class="bg-amber-100 hover:bg-amber-200 text-amber-700 px-2 py-1 rounded text-xs font-bold border border-amber-200 transition-colors shadow-sm">未請求</button>`;const linkHtml=p.link?`<a href="${p.link}" target="_blank" class="text-blue-500 hover:text-blue-700 ml-1 inline-flex items-center" title="請求書を開く"><i class="fas fa-external-link-alt text-[10px]"></i></a>`:'';const tr=document.createElement('tr');tr.className='hover:bg-slate-50';tr.innerHTML=`<td class="p-3 text-center"><input type="checkbox" class="inc-checkbox rounded border-slate-300 cursor-pointer" value="${p.id}"></td><td class="p-3 whitespace-nowrap"><p class="font-bold text-xs">${p.payDate||'-'}</p><p class="text-[10px] text-slate-500">請:${p.reqDate||'-'}</p></td><td class="p-3"><p class="font-bold text-xs">${p.client||''}</p><p class="text-xs text-slate-500 flex items-center">${p.title||''}${linkHtml}</p></td><td class="p-3 font-mono text-right text-slate-600 text-xs">${fmt(p.amount)}</td><td class="p-3 font-mono text-right text-slate-500 text-xs">${fmt(p.tax)}</td><td class="p-3 font-mono text-right font-bold text-xs">${fmt(p.total)}</td><td class="p-3 font-mono text-right text-red-500 text-xs">▲${fmt(p.withholding)}</td><td class="p-3 font-mono text-right font-bold text-emerald-700 bg-emerald-50/50 text-xs">${fmt(p.net)}</td><td class="p-3 text-center">${badge}</td><td class="p-3 text-center whitespace-nowrap"><button onclick="dupIncome('${p.id}')" class="text-emerald-500 hover:text-emerald-700 mx-1" title="複製"><i class="fas fa-copy"></i></button><button onclick="openIncomeModal('${p.id}')" class="text-slate-400 hover:text-slate-700 mx-1"><i class="fas fa-edit"></i></button><button onclick="delIncome('${p.id}')" class="text-red-300 hover:text-red-600 mx-1"><i class="fas fa-trash"></i></button></td>`;tb.appendChild(tr);});}
+function toggleAllIncomes(cb){document.querySelectorAll('.inc-checkbox').forEach(c=>c.checked=cb.checked);}
+function downloadIncomeCSV(){
+    const selected=Array.from(document.querySelectorAll('.inc-checkbox:checked')).map(c=>String(c.value));
+    const data=selected.length?S.incomes.filter(i=>selected.includes(String(i.id))):S.incomes;
+    if(!data.length){customAlert('出力する収入データがありません','info');return;}
+    const rows=[['請求日','入金日','クライアント','案件内容','税抜金額','消費税','税込金額','源泉徴収','実入金','ステータス']];
+    data.forEach(p=>rows.push([p.reqDate||'',p.payDate||'',p.client||'',p.title||'',p.amount||0,p.tax||0,p.total||0,p.withholding||0,p.net||0,p.status||'']));
+    const csv='\uFEFF'+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=`収入_${new Date().toISOString().slice(0,10)}.csv`;document.body.appendChild(a);a.click();a.remove();
+    customAlert(`${data.length}件をCSV出力しました`,'success');
+}
+function downloadExpenseCSV(){
+    const data=expFilter==='all'?S.expenses:S.expenses.filter(e=>e.category===expFilter);
+    if(!data.length){customAlert('出力する支出データがありません','info');return;}
+    const rows=[['支払日','カテゴリ','支払先','細目・摘要','税抜金額','消費税','税込金額','源泉徴収','実支払']];
+    data.forEach(p=>rows.push([p.payDate||'',p.category||'',p.payee||'',p.title||'',p.amount||0,p.tax||0,p.total||0,p.withholding||0,p.net||0]));
+    const csv='\uFEFF'+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=`支出_${new Date().toISOString().slice(0,10)}.csv`;document.body.appendChild(a);a.click();a.remove();
+    customAlert(`${data.length}件をCSV出力しました`,'success');
+}
 function toggleIncomeStatus(id){const p=S.incomes.find(x=>String(x.id)===String(id));if(!p)return;if(p.status==='未請求')p.status='請求済';else if(p.status==='請求済')p.status='入金済';else p.status='未請求';save();renderIncome();}
 function calcNextMonthEnd(){const req=document.getElementById('inc-req-date').value;if(!req)return;const d=new Date(req);const e=new Date(d.getFullYear(),d.getMonth()+2,0);document.getElementById('inc-pay-date').value=`${e.getFullYear()}-${String(e.getMonth()+1).padStart(2,'0')}-${String(e.getDate()).padStart(2,'0')}`;}
 function calcIncome(auto=true){const a=Number(document.getElementById('inc-amount').value)||0,t=Math.floor(a*.1),tot=a+t;document.getElementById('inc-tax').value=t;document.getElementById('inc-total').value=tot;let w=Number(document.getElementById('inc-withholding').value)||0;if(auto){w=Math.floor(a*.1021);document.getElementById('inc-withholding').value=w;}document.getElementById('inc-net').value=tot-w;}
@@ -1095,6 +1337,77 @@ function dupExpense(id){const p=S.expenses.find(x=>String(x.id)===String(id));if
 // ===== AI TOOLS =====
 function importPdfData2026(){customConfirm('添付のPDF「取引帳」から2026年分の経費データを取り込みますか？',()=>{const pdfData=[{d:'2026-01-12',c:'会議費',p:'コメダ珈琲店 アトレ亀戸店',t:'株式会社S Sパートナー様と新規案件に関する相談',a:2980,r:10},{d:'2026-01-21',c:'接待交際費',p:'士別バーベキュー 札幌店',t:'Algrowth様との新規案件の相談',a:7480,r:10},{d:'2026-01-21',c:'接待交際費',p:'回転寿し トリトン厚別店',t:'Algrowth様との新規案件の相談',a:5313,r:10},{d:'2026-01-26',c:'経費',p:'Octopus Energy',t:'電気料金 2025/12/15-01/14(事業利用分20%)',a:2160,r:10},{d:'2026-01-27',c:'経費',p:'OpenAI, LLC',t:'ChatGPT Plus 1月分利用料(業務100%)',a:3500,r:10},{d:'2026-01-31',c:'接待交際費',p:'江戸前回転寿司もりいち亀戸駅前',t:'アーバンコネクト様への打ち合わせ',a:3330,r:10},{d:'2026-02-04',c:'会議費',p:'ランビックスイーツデリ',t:'ラクスル様との打ち合わせ',a:1130,r:8},{d:'2026-02-07',c:'接待交際費',p:'根室花まる 錦糸町テルミナ店',t:'株式会社BLAMとの打ち合わせ',a:3350,r:10},{d:'2026-02-11',c:'接待交際費',p:'LAS青山店',t:'アイファクトリー様との新規案件相談',a:19250,r:10},{d:'2026-02-11',c:'会議費',p:'ドトール南青山5丁目店',t:'リベイス様との打ち合わせ',a:1150,r:10},{d:'2026-02-13',c:'会議費',p:'餃子の王将亀戸店',t:'リベイス様との打ち合わせ',a:3037,r:10},{d:'2026-02-15',c:'接待交際費',p:'回転寿しトリトン東京スカイツリ',t:'合同会社Liberra様と新規案件の相談',a:5874,r:10},{d:'2026-02-15',c:'接待交際費',p:'チーズガーデン東京ソラマチ店',t:'アイファクトリー様への手土産',a:1690,r:8},{d:'2026-02-16',c:'会議費',p:'日高屋 亀戸店(出前館)',t:'ラクスル様との打ち合わせ',a:1410,r:8},{d:'2026-02-21',c:'接待交際費',p:'日本橋芋屋金次郎',t:'アーバンコネクト様への手土産',a:950,r:8},{d:'2026-02-21',c:'会議費',p:'泰興楼八重洲本店',t:'株式会社S Sパートナー様と新規案件に関する相談',a:2100,r:10},{d:'2026-02-22',c:'接待交際費',p:'江戸前回転寿司もりいち亀戸駅前',t:'フラッグシップオーケストラ様と新規案件の相談',a:2320,r:10},{d:'2026-02-26',c:'接待交際費',p:'豚ウォーリー亀戸店',t:'アイファクトリー様との新規案件相談',a:7282,r:10},{d:'2026-03-01',c:'接待交際費',p:'三越銀座店',t:'アイファクトリー様への手土産',a:1512,r:10},{d:'2026-03-01',c:'会議費',p:'KOMEDAis東銀座',t:'アーバンコネクト様との打ち合わせ',a:850,r:10},{d:'2026-03-03',c:'会議費',p:'日高屋 亀戸店(出前館)',t:'ラクスル様との打ち合わせ',a:1500,r:8},{d:'2026-03-03',c:'会議費',p:'大戸屋ごはん処 亀戸駅前店',t:'ラクスル様との打ち合わせ',a:1350,r:8},{d:'2026-03-05',c:'会議費',p:'日高屋 亀戸店(出前館)',t:'リベイス様との打ち合わせ',a:1200,r:8},{d:'2026-03-06',c:'会議費',p:'あん庵 赤坂見附店',t:'アーバンコネクト様との会食',a:11686,r:10},{d:'2026-03-07',c:'接待交際費',p:'コメダ珈琲店 アトレ亀戸店',t:'アーバンコネクト様への手土産',a:910,r:10},{d:'2026-03-07',c:'会議費',p:'コメダ珈琲店 アトレ亀戸店',t:'アーバンコネクト様とのMTG',a:2080,r:10}];let addedCount=0;pdfData.forEach(item=>{const exists=S.expenses.some(e=>e.payDate===item.d&&e.total===item.a&&e.payee===item.p);if(!exists){const amount=Math.floor(item.a/(1+(item.r/100)));const tax=item.a-amount;S.expenses.push({id:'pdf-'+Date.now()+'-'+addedCount,category:item.c,payDate:item.d,payee:item.p,title:item.t,amount,tax,total:item.a,withholding:0,net:item.a});addedCount++;}});if(addedCount>0){save();renderExpense();runSimulation();customAlert(`${addedCount}件の経費データをインポートしました！`,'success');}else{customAlert('既に取り込み済みか対象データがありません。','info');}});}
 
+// ===== Google Drive Picker =====
+const GDRIVE_CLIENT_ID='731001224801-emnqbtl1f7op463gouvm3fe5akodaq6c.apps.googleusercontent.com';
+const GDRIVE_SCOPES='https://www.googleapis.com/auth/drive.readonly';
+let _gapiInited=false,_gisInited=false,_tokenClient=null,_drivePickerTarget=null;
+
+function loadGapiAndGis(){
+    if(!document.getElementById('gapi-script')){
+        const s1=document.createElement('script');s1.id='gapi-script';s1.src='https://apis.google.com/js/api.js';
+        s1.onload=()=>{gapi.load('client:picker',()=>{gapi.client.init({}).then(()=>{_gapiInited=true;});});};
+        document.head.appendChild(s1);
+    }
+    if(!document.getElementById('gis-script')){
+        const s2=document.createElement('script');s2.id='gis-script';s2.src='https://accounts.google.com/gsi/client';
+        s2.onload=()=>{_tokenClient=google.accounts.oauth2.initTokenClient({client_id:GDRIVE_CLIENT_ID,scope:GDRIVE_SCOPES,callback:''});_gisInited=true;};
+        document.head.appendChild(s2);
+    }
+}
+
+function openDrivePicker(target){
+    _drivePickerTarget=target;
+    if(!_gapiInited||!_gisInited||!_tokenClient){
+        loadGapiAndGis();
+        customAlert('Googleドライブを初期化中です。\n2〜3秒後にもう一度お試しください。','info');
+        return;
+    }
+    _tokenClient.callback=async(resp)=>{
+        if(resp.error){customAlert('Google認証に失敗しました: '+resp.error,'error');return;}
+        showDrivePicker(resp.access_token);
+    };
+    if(gapi.client.getToken()===null){_tokenClient.requestAccessToken({prompt:'consent'});}
+    else{_tokenClient.requestAccessToken({prompt:''});}
+}
+
+function showDrivePicker(accessToken){
+    const view=new google.picker.View(google.picker.ViewId.DOCS_IMAGES);
+    view.setMimeTypes('image/jpeg,image/png,image/heic,image/webp,application/pdf');
+    const picker=new google.picker.PickerBuilder()
+        .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+        .setOAuthToken(accessToken)
+        .addView(view)
+        .setCallback((data)=>drivePickerCallback(data,accessToken))
+        .build();
+    picker.setVisible(true);
+}
+
+async function drivePickerCallback(data,accessToken){
+    if(data.action!==google.picker.Action.PICKED)return;
+    const docs=data[google.picker.Response.DOCUMENTS];
+    if(!docs||!docs.length)return;
+    customAlert(`${docs.length}件を取得中...`,'info');
+    const files=[];
+    for(const doc of docs){
+        const id=doc[google.picker.Document.ID];
+        const name=doc[google.picker.Document.NAME]||'file';
+        const mimeType=doc[google.picker.Document.MIME_TYPE]||'image/jpeg';
+        try{
+            const resp=await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`,{headers:{Authorization:`Bearer ${accessToken}`}});
+            if(!resp.ok)throw new Error('HTTP '+resp.status);
+            const blob=await resp.blob();
+            files.push(new File([blob],name,{type:mimeType}));
+        }catch(e){console.error('Drive fetch error:',e);}
+    }
+    if(!files.length){customAlert('ファイルの取得に失敗しました','error');return;}
+    if(_drivePickerTarget==='rc')addRcFiles(files);
+    else if(_drivePickerTarget==='dv')addDvFiles(files);
+    else if(_drivePickerTarget==='sc')addScFiles(files);
+    else if(_drivePickerTarget==='tr')addTrFiles(files);
+    customAlert(`${files.length}件をドライブから読み込みました`,'success');
+}
+
+// initialize Drive API scripts on page load
 function initDD(){
     // Receipt drop zone
     const dz=document.getElementById('drop-zone'),fi=document.getElementById('file-input');

@@ -856,8 +856,8 @@ function setDashMode(mode,sv=true){
 }
 
 function updatePieCharts(monthData,accumData){
-    const labels=['手取り','経費','税・社保'];
-    const colors=['#3b82f6','#f59e0b','#ef4444'];
+    const labels=['手取り（可処分）','経費','税・社保','積立'];
+    const colors=['#3b82f6','#f59e0b','#ef4444','#10b981'];
     const opts={responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{font:{size:9},padding:6,boxWidth:10}},tooltip:{callbacks:{label:(ctx)=>' '+fmt(ctx.parsed)}}}};
     if(monthlyChart)monthlyChart.destroy();
     const c1=document.getElementById('chart-monthly');
@@ -946,19 +946,21 @@ function runSimulation(){
     const fEl=document.getElementById('flow-free');
     fEl.textContent=fmt(free);
     fEl.className=`kpi-number-lg font-extrabold font-mono ${free<0?'text-red-300':'text-white'}`;
-    // Pie charts
+    // Pie charts - 4 slices: 手取り / 経費 / 税社保 / 積立
     const mNetRev=wh?rev-whM:rev;
-    const mPool=pool;
-    const mTakehome=Math.max(0,mNetRev-exp-mPool);
-    const mTax=Math.max(0,mPool);
+    const mInvest=Math.max(0,inv);
+    const mPool=Math.max(0,pool);
     const mExp=Math.max(0,exp);
-    // Cumulative charts
+    const mTakehome=Math.max(0,mNetRev-mExp-mPool-mInvest);
+    // Cumulative
     const accumRevNet=wh?revAccum-whY*(targetMonthNum/12):revAccum;
     const accumTax=Math.max(0,totTax*(targetMonthNum/12));
-    const accumTakehome=Math.max(0,accumRevNet-expAccum-accumTax);
+    const accumInvest=Math.max(0,mInvest*targetMonthNum);
+    const accumExp=Math.max(0,expAccum);
+    const accumTakehome=Math.max(0,accumRevNet-accumExp-accumTax-accumInvest);
     updatePieCharts(
-        [Math.max(0,mTakehome),Math.max(0,mExp),Math.max(0,mTax)],
-        [Math.max(0,accumTakehome),Math.max(0,expAccum),Math.max(0,accumTax)]
+        [mTakehome, mExp, mPool, mInvest],
+        [accumTakehome, accumExp, accumTax, accumInvest]
     );
 }
 
@@ -1231,7 +1233,47 @@ async function analyzeTransport(){
 }
 
 // 一括登録
-function registerReceiptsToExpense(){const csv=document.getElementById('ai-output').value.trim();if(!csv)return;const lines=csv.split('\n');let count=0;const start=lines[0].includes('取引日')?1:0;for(let i=start;i<lines.length;i++){const cols=lines[i].split(',');if(cols.length<6)continue;const dateStr=cols[0].replace(/\//g,'-');const aiCat=(cols[1]||'').trim();let cat='経費';if(['会議費','接待交際費','消耗品費','交通費','外注費'].includes(aiCat))cat=aiCat;else if(aiCat.includes('会議'))cat='会議費';else if(aiCat.includes('交際')||aiCat.includes('接待'))cat='接待交際費';else if(aiCat.includes('消耗'))cat='消耗品費';const payee=cols[4]||'レシート店舗';let title=`${cols[3]||''}`;const total=Number(cols[5].replace(/[^0-9]/g,''))||0;const rate=cols[6]&&cols[6].includes('8')?8:10;const isKeigen=rate===8||(cols[7]&&cols[7].includes('対象'));if(isKeigen)title+=' ※軽減税率対象';const amount=Math.floor(total/(1+(rate/100)));const tax=total-amount;S.expenses.push({id:Date.now().toString()+i,category:cat,payDate:dateStr,payee,title,amount,tax,total,withholding:0,net:total});count++;}if(count>0){save();renderExpense();runSimulation();customAlert(`${count}件の経費を一括登録しました！`,'success');}}
+// CSV列ズレ対策: cols[startIdx]以降を結合して最初の3桁以上の数値を金額として取得
+function extractAmount(cols, startIdx){
+    const joined=cols.slice(startIdx).join('');
+    const m=joined.match(/\d+/g);
+    if(!m)return 0;
+    // 最初に見つかる100以上の数字を金額とする
+    for(const s of m){const n=Number(s);if(n>=100)return n;}
+    return Number(m[0])||0;
+}
+// 摘要フォーマット: カテゴリ別に適切な文言を付与
+function formatTitle(aiTitle, category){
+    if(category==='消耗品費') return '業務にて使用のため';
+    if(category==='交通費') return aiTitle||'業務移動のため';
+    // 会議費・接待交際費・その他: AIの摘要をそのまま使う（AIが「〇〇様との打ち合わせ」等を生成）
+    return aiTitle||'打ち合わせのため';
+}
+
+function registerReceiptsToExpense(){
+    const csv=document.getElementById('ai-output').value.trim();if(!csv)return;
+    const lines=csv.split('\n');let count=0;const start=lines[0].includes('取引日')?1:0;
+    for(let i=start;i<lines.length;i++){
+        const cols=lines[i].split(',');if(cols.length<6)continue;
+        const dateStr=cols[0].replace(/\//g,'-');
+        const aiCat=(cols[1]||'').trim();
+        let cat='経費';
+        if(['会議費','接待交際費','消耗品費','交通費','外注費'].includes(aiCat))cat=aiCat;
+        else if(aiCat.includes('会議'))cat='会議費';
+        else if(aiCat.includes('交際')||aiCat.includes('接待'))cat='接待交際費';
+        else if(aiCat.includes('消耗'))cat='消耗品費';
+        const payee=cols[4]||'レシート店舗';
+        const aiTitle=(cols[3]||'').trim();
+        const total=extractAmount(cols,5);
+        const rate=cols[6]&&cols[6].includes('8')?8:10;
+        const isKeigen=rate===8||(cols[7]&&cols[7].includes('対象'));
+        let title=formatTitle(aiTitle,cat);
+        if(isKeigen&&cat!=='消耗品費')title+=' ※軽減税率対象';
+        const amount=Math.floor(total/(1+(rate/100)));const tax=total-amount;
+        S.expenses.push({id:Date.now().toString()+i,category:cat,payDate:dateStr,payee,title,amount,tax,total,withholding:0,net:total});count++;
+    }
+    if(count>0){save();renderExpense();runSimulation();customAlert(`${count}件の経費を一括登録しました！`,'success');}
+}
 
 function registerDeliveryToExpense(){
     const csv=document.getElementById('dv-output').value.trim();if(!csv)return;
@@ -1240,9 +1282,9 @@ function registerDeliveryToExpense(){
         const cols=lines[i].split(',');if(cols.length<6)continue;
         const dateStr=cols[0].replace(/\//g,'-');
         const payee=cols[4]||'デリバリーサービス';
-        const title=(cols[3]||'デリバリー注文')+' ※軽減税率対象';
-        const total=Number(cols[5].replace(/[^0-9]/g,''))||0;
+        const total=extractAmount(cols,5);
         const amount=Math.floor(total/1.08);const tax=total-amount;
+        const title='業務上の打ち合わせのため ※軽減税率対象';
         S.expenses.push({id:'dv-'+Date.now()+'-'+i,category:'会議費',payDate:dateStr,payee,title,amount,tax,total,withholding:0,net:total});count++;
     }
     if(count>0){save();renderExpense();runSimulation();customAlert(`${count}件のデリバリー経費を会議費として登録しました！`,'success');}
@@ -1291,16 +1333,28 @@ function registerSuppliesToExpense(){
         const cols=lines[i].split(',');if(cols.length<6)continue;
         const dateStr=cols[0].replace(/\//g,'-');
         const payee=cols[4]||'Amazon.co.jp';
-        const title=(cols[3]||'消耗品').substring(0,50);
-        const total=Number(cols[5].replace(/[^0-9]/g,''))||0;
+        const total=extractAmount(cols,5);
         if(!total)continue;
         const amount=Math.floor(total/1.1);const tax=total-amount;
+        const title='業務にて使用のため';
         S.expenses.push({id:'sc-'+Date.now()+'-'+i,category:'消耗品費',payDate:dateStr,payee,title,amount,tax,total,withholding:0,net:total});count++;
     }
     if(count>0){save();renderExpense();runSimulation();customAlert(`${count}件の消耗品費を登録しました！`,'success');}
 }
 
-function registerTransportToExpense(){const csv=document.getElementById('tr-output').value.trim();if(!csv)return;const lines=csv.split('\n');let count=0;const start=lines[0].includes('取引日')?1:0;for(let i=start;i<lines.length;i++){const cols=lines[i].split(',');if(cols.length<3)continue;const dateStr=cols[0].replace(/\//g,'-');const title=cols[1]||'交通費';const total=Number(cols[2].replace(/[^0-9]/g,''))||0;S.expenses.push({id:Date.now().toString()+i,category:'交通費',payDate:dateStr,payee:'モバイルSuica等',title,amount:total,tax:0,total,withholding:0,net:total});count++;}if(count>0){save();renderExpense();runSimulation();customAlert(`${count}件の交通費を一括登録しました！`,'success');}}
+function registerTransportToExpense(){
+    const csv=document.getElementById('tr-output').value.trim();if(!csv)return;
+    const lines=csv.split('\n');let count=0;const start=lines[0].includes('取引日')?1:0;
+    for(let i=start;i<lines.length;i++){
+        const cols=lines[i].split(',');if(cols.length<3)continue;
+        const dateStr=cols[0].replace(/\//g,'-');
+        const aiTitle=(cols[1]||'').trim();
+        const total=Number(cols[2].replace(/[^0-9]/g,''))||0;
+        const title=aiTitle||'業務移動のため';
+        S.expenses.push({id:Date.now().toString()+i,category:'交通費',payDate:dateStr,payee:'モバイルSuica等',title,amount:total,tax:0,total,withholding:0,net:total});count++;
+    }
+    if(count>0){save();renderExpense();runSimulation();customAlert(`${count}件の交通費を一括登録しました！`,'success');}
+}
 
 function copyCsv(id){const text=document.getElementById(id).value;if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>customAlert('コピーしました！','success')).catch(()=>{fallbackCopy(text);});}else{fallbackCopy(text);}}
 function fallbackCopy(text){const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');customAlert('コピーしました！','success');}catch(e){}document.body.removeChild(ta);}

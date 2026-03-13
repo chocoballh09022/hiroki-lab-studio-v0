@@ -1154,7 +1154,20 @@ async function analyzeReceipts(){
     btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>解析中...';btn.disabled=true;
     try{
         const parts=await Promise.all(rcFiles.map(async f=>{const b=await b64(f);const mt=f.type||(f.name.toLowerCase().endsWith('heic')?'image/heic':'image/jpeg');return{inlineData:{mimeType:mt,data:b}};}));
-        const prompt=`領収書の画像を解析しCSVで出力せよ。\nヘッダー行: 取引日,科目(会議費|接待交際費|消耗品費|交通費|外注費|経費),取引手段,摘要,取引先,税込金額,消費税率,軽減税率対象\n【重要】カンマを値に含めない。`;
+        const prompt=`領収書・レシートの画像を正確に解析し、以下の厳密なCSV形式で出力せよ。
+
+【出力フォーマット（ヘッダー行必須）】
+取引日,科目,取引手段,摘要,取引先,税込金額,消費税率,軽減税率対象
+
+【絶対に守るルール】
+1. 「税込金額」は画像に記載された税込合計金額の「整数のみ」を出力すること。¥マーク・カンマ・円・スペース・小数点は一切含めない。例: 1180
+2. 「消費税率」は 8 または 10 の数字のみ（%記号不要）
+3. 全フィールドでカンマを使用禁止（値にカンマが必要な場合はスペースで代替）
+4. 「科目」は 会議費 / 接待交際費 / 消耗品費 / 交通費 / 外注費 / 経費 のいずれか
+5. 「摘要」は店名・商品名など画像から読み取った内容（カンマ不使用）
+6. 「取引先」は店名・販売元名（カンマ不使用）
+7. 日付はYYYY-MM-DD形式
+8. コードブロックや余計な文章を含めず、CSVのみを出力すること`;
         const data=await fetchAI({contents:[{role:'user',parts:[{text:prompt},...parts]}]});
         if(!data.candidates||data.candidates.length===0)throw new Error('AIが回答を生成できませんでした。');
         const csv=extractCsv(data.candidates[0].content.parts[0].text||'');
@@ -1176,15 +1189,19 @@ async function analyzeDelivery(){
     btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>解析中...';btn.disabled=true;
     try{
         const parts=await Promise.all(dvFiles.map(async f=>{const b=await b64(f);const mt=f.type||(f.name.toLowerCase().endsWith('heic')?'image/heic':'image/jpeg');return{inlineData:{mimeType:mt,data:b}};}));
-        const prompt=`出前館・Uber Eats等のデリバリーサービス領収書を解析せよ。
-以下のルールを厳守すること:
-- カテゴリ（科目）は全て「会議費」に固定すること
-- 消費税率は全て「8%」（軽減税率対象）に固定すること
-- サービス料・配達料等の手数料も全て「会議費」「8%」として扱う
-- 合計金額(税込)を取引金額とする
-出力形式(ヘッダーあり):
+        const prompt=`出前館・Uber Eats等のデリバリーサービス領収書を正確に解析し、以下の厳密なCSV形式で出力せよ。
+
+【出力フォーマット（ヘッダー行必須）】
 取引日,科目,取引手段,摘要,取引先,税込金額,消費税率,軽減税率対象
-カンマを値に含めない。日付はYYYY-MM-DD形式。`;
+
+【絶対に守るルール】
+1. 「税込金額」は画像の合計金額の「整数のみ」。¥マーク・カンマ・円・スペース一切不要。例: 2480
+2. 科目は「会議費」固定
+3. 消費税率は「8」固定（%記号不要）
+4. 軽減税率対象は「対象」固定
+5. 全フィールドでカンマ使用禁止
+6. 日付はYYYY-MM-DD形式
+7. CSVのみ出力（前後の説明文・コードブロック不要）`;
         const data=await fetchAI({contents:[{role:'user',parts:[{text:prompt},...parts]}]});
         if(!data.candidates||data.candidates.length===0)throw new Error('AIが回答を生成できませんでした。');
         const csv=extractCsv(data.candidates[0].content.parts[0].text||'');
@@ -1234,20 +1251,29 @@ async function analyzeTransport(){
 
 // 一括登録
 // CSV列ズレ対策: cols[startIdx]以降を結合して最初の3桁以上の数値を金額として取得
+// 金額パース: 各列を順にチェックし、最初に見つかる妥当な整数金額を返す
+// AIが¥1,180と書くと列ズレするため、列5以降を結合して数字列を全て取得し
+// 最大のもの（=合計金額相当）を採用する戦略に変更
 function extractAmount(cols, startIdx){
-    const joined=cols.slice(startIdx).join('');
-    const m=joined.match(/\d+/g);
-    if(!m)return 0;
-    // 最初に見つかる100以上の数字を金額とする
-    for(const s of m){const n=Number(s);if(n>=100)return n;}
-    return Number(m[0])||0;
+    // まず cols[startIdx] 単体で試みる（カンマ・¥除去後）
+    const raw=(cols[startIdx]||'').replace(/[¥￥,\s円]/g,'').trim();
+    const direct=parseInt(raw,10);
+    if(!isNaN(direct)&&direct>=10)return direct;
+    // 列ズレ対策: startIdx以降を結合して最大の整数を金額とみなす
+    const joined=cols.slice(startIdx).join('').replace(/[¥￥,\s円]/g,'');
+    const nums=(joined.match(/\d+/g)||[]).map(Number).filter(n=>n>=10);
+    if(!nums.length)return 0;
+    // 最大値を合計金額とみなす（小計・税額・合計が混在する場合、合計が最大のはず）
+    return Math.max(...nums);
 }
-// 摘要フォーマット: カテゴリ別に適切な文言を付与
-function formatTitle(aiTitle, category){
+
+// 摘要: カテゴリごとに完全固定（AIの出力は無視）
+function formatTitle(category){
     if(category==='消耗品費') return '業務にて使用のため';
-    if(category==='交通費') return aiTitle||'業務移動のため';
-    // 会議費・接待交際費・その他: AIの摘要をそのまま使う（AIが「〇〇様との打ち合わせ」等を生成）
-    return aiTitle||'打ち合わせのため';
+    if(category==='交通費')   return '業務移動のため';
+    if(category==='会議費')   return '○○様との打ち合わせのため';
+    if(category==='接待交際費') return '○○様との打ち合わせのため';
+    return '業務のため';
 }
 
 function registerReceiptsToExpense(){
@@ -1262,12 +1288,11 @@ function registerReceiptsToExpense(){
         else if(aiCat.includes('会議'))cat='会議費';
         else if(aiCat.includes('交際')||aiCat.includes('接待'))cat='接待交際費';
         else if(aiCat.includes('消耗'))cat='消耗品費';
-        const payee=cols[4]||'レシート店舗';
-        const aiTitle=(cols[3]||'').trim();
+        const payee=(cols[4]||'レシート店舗').replace(/[¥￥]/g,'').trim();
         const total=extractAmount(cols,5);
         const rate=cols[6]&&cols[6].includes('8')?8:10;
         const isKeigen=rate===8||(cols[7]&&cols[7].includes('対象'));
-        let title=formatTitle(aiTitle,cat);
+        let title=formatTitle(cat);
         if(isKeigen&&cat!=='消耗品費')title+=' ※軽減税率対象';
         const amount=Math.floor(total/(1+(rate/100)));const tax=total-amount;
         S.expenses.push({id:Date.now().toString()+i,category:cat,payDate:dateStr,payee,title,amount,tax,total,withholding:0,net:total});count++;
@@ -1281,10 +1306,10 @@ function registerDeliveryToExpense(){
     for(let i=start;i<lines.length;i++){
         const cols=lines[i].split(',');if(cols.length<6)continue;
         const dateStr=cols[0].replace(/\//g,'-');
-        const payee=cols[4]||'デリバリーサービス';
+        const payee=(cols[4]||'デリバリーサービス').replace(/[¥￥]/g,'').trim();
         const total=extractAmount(cols,5);
         const amount=Math.floor(total/1.08);const tax=total-amount;
-        const title='業務上の打ち合わせのため ※軽減税率対象';
+        const title=formatTitle('会議費')+' ※軽減税率対象';
         S.expenses.push({id:'dv-'+Date.now()+'-'+i,category:'会議費',payDate:dateStr,payee,title,amount,tax,total,withholding:0,net:total});count++;
     }
     if(count>0){save();renderExpense();runSimulation();customAlert(`${count}件のデリバリー経費を会議費として登録しました！`,'success');}
@@ -1301,18 +1326,21 @@ async function analyzeSupplies(){
             const mt=f.type||( f.name.toLowerCase().endsWith('pdf')?'application/pdf': f.name.toLowerCase().endsWith('heic')?'image/heic':'image/jpeg');
             return{inlineData:{mimeType:mt,data:b}};
         }));
-        const prompt=`Amazon・家電量販店・文具店等の領収書・注文確認書を解析せよ。
-以下のルールを厳守すること:
-- カテゴリ（科目）は全て「消耗品費」に固定すること
-- 消費税率は10%に固定すること（軽減税率対象外）
-- 注文日または購入日を取引日とすること（YYYY-MM-DD形式）
-- 商品名・モデル名を摘要に記載すること（長すぎる場合は先頭40文字程度に短縮）
-- 支払い金額（税込・実際に支払った金額、ギフトカード等の割引後）を税込金額とすること
-- Amazonの場合: 「ご請求額」の金額を使用すること（ギフトカード等で¥0になる場合は商品の小計を使用）
-- 取引先はショップ・販売元名またはサービス名とすること（Amazonの場合は「Amazon.co.jp」）
-出力形式(ヘッダーあり):
+        const prompt=`Amazon・家電量販店・文具店等の領収書・注文確認書を正確に解析し、以下の厳密なCSV形式で出力せよ。
+
+【出力フォーマット（ヘッダー行必須）】
 取引日,科目,取引手段,摘要,取引先,税込金額,消費税率,軽減税率対象
-カンマを値に含めない。税込金額は数字のみ（¥マーク不要）。軽減税率対象は「対象外」固定。`;
+
+【絶対に守るルール】
+1. 「税込金額」は画像に記載された税込合計金額の「整数のみ」。¥マーク・カンマ・円・スペース一切不要。例: 1180
+2. Amazonの場合: 「ご請求額」を使用。ギフトカード等で¥0の場合は「商品の小計」を使用。
+3. 科目は「消耗品費」固定
+4. 消費税率は「10」固定（%記号不要）
+5. 軽減税率対象は「対象外」固定
+6. 取引先はショップ・販売元名（Amazonの場合は「Amazon.co.jp」）
+7. 全フィールドでカンマ使用禁止
+8. 日付はYYYY-MM-DD形式
+9. CSVのみ出力（前後の説明文・コードブロック不要）`;
         const data=await fetchAI({contents:[{role:'user',parts:[{text:prompt},...parts]}]});
         if(!data.candidates||data.candidates.length===0)throw new Error('AIが回答を生成できませんでした。');
         const csv=extractCsv(data.candidates[0].content.parts[0].text||'');
@@ -1332,11 +1360,11 @@ function registerSuppliesToExpense(){
     for(let i=start;i<lines.length;i++){
         const cols=lines[i].split(',');if(cols.length<6)continue;
         const dateStr=cols[0].replace(/\//g,'-');
-        const payee=cols[4]||'Amazon.co.jp';
+        const payee=(cols[4]||'Amazon.co.jp').replace(/[¥￥]/g,'').trim();
         const total=extractAmount(cols,5);
         if(!total)continue;
         const amount=Math.floor(total/1.1);const tax=total-amount;
-        const title='業務にて使用のため';
+        const title=formatTitle('消耗品費');
         S.expenses.push({id:'sc-'+Date.now()+'-'+i,category:'消耗品費',payDate:dateStr,payee,title,amount,tax,total,withholding:0,net:total});count++;
     }
     if(count>0){save();renderExpense();runSimulation();customAlert(`${count}件の消耗品費を登録しました！`,'success');}

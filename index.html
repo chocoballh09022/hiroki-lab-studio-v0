@@ -426,6 +426,21 @@
                 <div class="flex-1"><input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(event)"><button onclick="document.getElementById('import-file').click()" class="w-full bg-white border hover:bg-slate-50 text-slate-700 font-bold py-2 px-4 rounded flex items-center justify-center"><i class="fas fa-upload mr-2"></i>データを復元</button></div>
             </div>
         </div>
+        <!-- Cross-device sync guide -->
+        <div class="mt-4 bg-amber-50 border border-amber-200 rounded-2xl p-5">
+            <h3 class="font-bold text-amber-800 mb-2"><i class="fas fa-mobile-alt mr-2"></i>スマホ↔PC 連動について</h3>
+            <p class="text-xs text-amber-700 leading-relaxed mb-3">現在のデータはブラウザのローカルストレージに保存されるため、<strong>デバイス間で自動同期されません</strong>。以下の方法で対応できます：</p>
+            <div class="space-y-3">
+                <div class="bg-white border border-amber-100 rounded-xl p-3">
+                    <p class="font-bold text-xs text-slate-700 mb-1"><i class="fas fa-star text-amber-500 mr-1"></i>おすすめ：手動バックアップ同期</p>
+                    <p class="text-xs text-slate-500 leading-relaxed">① PCで「データをバックアップ保存」→ JSONファイルをGoogle Drive等に保存<br>② スマホのブラウザでこのページを開き「データを復元」→ 同じJSONを選択</p>
+                </div>
+                <div class="bg-white border border-amber-100 rounded-xl p-3">
+                    <p class="font-bold text-xs text-slate-700 mb-1"><i class="fas fa-cloud text-blue-500 mr-1"></i>自動同期（上級）：Firebase連携</p>
+                    <p class="text-xs text-slate-500 leading-relaxed">① <a href="https://console.firebase.google.com" target="_blank" class="text-blue-500 underline">Firebase Console</a> で無料プロジェクトを作成<br>② Firestoreデータベースを有効化（テストモード）<br>③ Webアプリを登録し取得した設定を開発者に共有 → コードに組み込みで自動同期が実現</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- ==================== TOOLS ==================== -->
@@ -742,15 +757,6 @@ let S=JSON.parse(JSON.stringify(DEF));
 let expFilter='all',rcFiles=[],trFiles=[],dvFiles=[],scFiles=[];
 let monthlyChart=null,cumulativeChart=null;
 
-function save(){
-    S.lastUpdated=new Date().toISOString();
-    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(S));}catch(e){console.error(e);return;}
-    const ic=document.getElementById('sync-icon'),tx=document.getElementById('sync-text');
-    ic.className='fas fa-check-circle text-emerald-500';tx.textContent='保存しました';
-    updateLastUpdatedLabel();
-    clearTimeout(save._t);
-    save._t=setTimeout(()=>{ic.className='fas fa-hdd text-emerald-500';tx.textContent='ローカル保存モード';},2000);
-}
 function load(){try{const r=localStorage.getItem(STORAGE_KEY);if(r)S=migrate(JSON.parse(r));}catch(e){console.error(e);}}
 function updateLastUpdatedLabel(){
     const lbl=document.getElementById('last-updated-label');
@@ -1147,8 +1153,252 @@ async function fetchAI(payload,retries=3){
 }
 function extractCsv(text){const m=text.match(new RegExp('\\x60\\x60\\x60(?:csv|text)?\\n([\\s\\S]*?)\\n\\x60\\x60\\x60'));return m?m[1].trim():text.trim();}
 
-// 経費レシート解析
+// ── JSON構造化出力ヘルパー ──────────────────────────────
+// Gemini の responseMimeType=application/json を使い、
+// 金額は必ずinteger型で返させることでCSV列ズレを根絶する
+const EXPENSE_SCHEMA = {
+    type:'array',
+    items:{
+        type:'object',
+        properties:{
+            date:         {type:'string',  description:'取引日 YYYY-MM-DD'},
+            payee:        {type:'string',  description:'取引先・店名'},
+            amount_total: {type:'integer', description:'税込合計金額（整数・円単位）'},
+            tax_rate:     {type:'integer', description:'消費税率 8 または 10'},
+            is_reduced:   {type:'boolean', description:'軽減税率(8%)対象かどうか'},
+            category:     {type:'string',  description:'会議費 接待交際費 消耗品費 交通費 外注費 経費 のいずれか'},
+            payment_method:{type:'string', description:'支払手段'}
+        },
+        required:['date','payee','amount_total','tax_rate','is_reduced','category']
+    }
+};
+
+async function callAI_JSON(imageParts, userPrompt){
+    const payload = {
+        contents:[{role:'user', parts:[{text: userPrompt}, ...imageParts]}],
+        generationConfig:{
+            responseMimeType:'application/json',
+            responseSchema: EXPENSE_SCHEMA
+        }
+    };
+    const data = await fetchAI(payload);
+    if(!data.candidates||!data.candidates.length) throw new Error('AIが回答を生成できませんでした。');
+    const text = data.candidates[0].content.parts[0].text || '[]';
+    return JSON.parse(text); // [{date, payee, amount_total, tax_rate, is_reduced, category, payment_method}]
+}
+
+// 解析結果を一時保持（登録時にCSV再パース不要）
+let rcItems=[], dvItems=[], scItems=[];
+
+// 解析結果をCSV風にtextareaへ表示する
+function itemsToCsvDisplay(items){
+    const header='取引日,科目,取引手段,摘要,取引先,税込金額,消費税率,軽減税率対象';
+    const rows=items.map(it=>{
+        const title=formatTitle(it.category, it.is_reduced);
+        return [
+            it.date, it.category, it.payment_method||'',
+            title, it.payee, it.amount_total,
+            it.tax_rate, it.is_reduced?'対象':'対象外'
+        ].join(',');
+    });
+    return [header,...rows].join('\n');
+}
+
+// ── 摘要ルール（完全固定・AI出力を一切使わない） ──────────
+function formatTitle(category, isReduced){
+    if(category==='消耗品費')  return '業務にて使用のため';
+    if(category==='交通費')    return '業務移動のため';
+    if(category==='会議費')    return isReduced ? '○○様との打ち合わせのため ※軽減税率対象' : '○○様との打ち合わせのため';
+    if(category==='接待交際費') return isReduced ? '○○様との打ち合わせのため ※軽減税率対象' : '○○様との打ち合わせのため';
+    return '業務のため';
+}
+
+// ── 経費レシート解析 ──────────────────────────────────
 async function analyzeReceipts(){
+    if(!rcFiles.length)return;
+    const btn=document.getElementById('btn-analyze');
+    btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>解析中...';btn.disabled=true;
+    try{
+        const parts=await Promise.all(rcFiles.map(async f=>{
+            const b=await b64(f);
+            const mt=f.type||(f.name.toLowerCase().endsWith('heic')?'image/heic':'image/jpeg');
+            return{inlineData:{mimeType:mt,data:b}};
+        }));
+        const prompt=`領収書・レシートの画像を解析し、取引情報をJSONで返せ。
+重要ルール:
+- amount_total は画像に記載された税込合計金額を整数で返すこと（¥マーク・カンマ不要）
+- テイクアウト・弁当・飲食物はis_reduced=true、tax_rate=8 とすること
+- イートイン・サービス・通常商品はis_reduced=false、tax_rate=10 とすること
+- category は 会議費/接待交際費/消耗品費/交通費/外注費/経費 のいずれか
+- date は YYYY-MM-DD 形式`;
+        rcItems = await callAI_JSON(parts, prompt);
+        const csv=itemsToCsvDisplay(rcItems);
+        document.getElementById('ai-output').value=csv;
+        document.getElementById('ai-result-container').classList.remove('hidden');
+        const ts=new Date().toLocaleString('ja-JP');
+        S.receiptHistory.unshift({id:Date.now().toString(),type:'経費',date:ts,csv});save();renderReceiptHistory();
+        rcFiles=[];renderFileList(rcFiles,'file-list','');
+    }catch(e){
+        if(e.message==='API_KEY_ERROR')customAlert('APIキーが未設定か無効です。設定タブを確認してください。','error');
+        else customAlert(`エラー: ${e.message}`,'error');
+    }finally{btn.innerHTML='<i class="fas fa-magic mr-2"></i>レシートをAI解析';btn.disabled=false;}
+}
+
+// ── デリバリーレシート解析 ──────────────────────────────
+async function analyzeDelivery(){
+    if(!dvFiles.length)return;
+    const btn=document.getElementById('btn-analyze-dv');
+    btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>解析中...';btn.disabled=true;
+    try{
+        const parts=await Promise.all(dvFiles.map(async f=>{
+            const b=await b64(f);
+            const mt=f.type||(f.name.toLowerCase().endsWith('heic')?'image/heic':'image/jpeg');
+            return{inlineData:{mimeType:mt,data:b}};
+        }));
+        const prompt=`出前館・Uber Eats等のデリバリー領収書を解析し、JSONで返せ。
+重要ルール:
+- category は「会議費」固定
+- is_reduced=true、tax_rate=8 固定（全品軽減税率）
+- amount_total は税込合計金額を整数で（¥・カンマ不要）
+- date は YYYY-MM-DD 形式
+- payee はデリバリーサービス名または店舗名`;
+        dvItems = await callAI_JSON(parts, prompt);
+        const csv=itemsToCsvDisplay(dvItems);
+        document.getElementById('dv-output').value=csv;
+        document.getElementById('dv-result-container').classList.remove('hidden');
+        const ts=new Date().toLocaleString('ja-JP');
+        S.receiptHistory.unshift({id:Date.now().toString(),type:'デリバリー',date:ts,csv});save();renderReceiptHistory();
+        dvFiles=[];renderFileList(dvFiles,'file-list-dv','');
+    }catch(e){
+        if(e.message==='API_KEY_ERROR')customAlert('APIキーが未設定か無効です。設定タブを確認してください。','error');
+        else customAlert(`エラー: ${e.message}`,'error');
+    }finally{btn.innerHTML='<i class="fas fa-magic mr-2"></i>デリバリーレシートを解析';btn.disabled=false;}
+}
+
+// ── 交通費AI抽出 ──────────────────────────────────────
+async function analyzeTransport(){
+    const text=document.getElementById('tr-text-input').value.trim();
+    if(!trFiles.length&&!text){customAlert('画像かテキストを入力してください','error');return;}
+    const btn=document.getElementById('btn-analyze-tr');
+    btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>抽出中...';btn.disabled=true;
+    try{
+        const parts=[];
+        if(text)parts.push({text:text});
+        const imgs=await Promise.all(trFiles.map(async f=>{const b=await b64(f);const mt=f.type||(f.name.toLowerCase().endsWith('heic')?'image/heic':'image/jpeg');return{inlineData:{mimeType:mt,data:b}};}));
+        parts.push(...imgs);
+        const currentYear=new Date().getFullYear();
+        const prompt=`Suica・ICカード・交通系ICの利用履歴から交通費のみをJSONで返せ。
+重要ルール:
+- 電車・バス・タクシー・新幹線のみ抽出。コンビニ・飲食・物販・チャージは除外
+- category は「交通費」固定
+- is_reduced=false、tax_rate=10 固定
+- 年の記載がない日付は ${currentYear} 年で補完し YYYY-MM-DD 形式で出力
+- amount_total は金額を整数で（¥・カンマ不要）
+- payee は乗車区間（例: 亀戸→新宿）`;
+        const payload={
+            contents:[{role:'user',parts:[{text:prompt},...parts]}],
+            generationConfig:{responseMimeType:'application/json',responseSchema:EXPENSE_SCHEMA}
+        };
+        const data=await fetchAI(payload);
+        if(!data.candidates||!data.candidates.length)throw new Error('AI回答生成エラー');
+        const trItems=JSON.parse(data.candidates[0].content.parts[0].text||'[]');
+        const header='取引日,摘要,金額';
+        const rows=trItems.map(it=>`${it.date},${it.payee},${it.amount_total}`);
+        const csv=[header,...rows].join('\n');
+        document.getElementById('tr-output').value=csv;
+        document.getElementById('tr-result-container').classList.remove('hidden');
+        const ts=new Date().toLocaleString('ja-JP');
+        S.receiptHistory.unshift({id:Date.now().toString(),type:'交通費',date:ts,csv});save();renderReceiptHistory();
+        trFiles=[];renderFileList(trFiles,'file-list-tr','');
+    }catch(e){customAlert(`抽出エラー: ${e.message}`,'error');}
+    finally{btn.innerHTML='<i class="fas fa-magic mr-2"></i>交通費を抽出';btn.disabled=false;}
+}
+
+// ── 消耗品費レシート解析 ──────────────────────────────
+async function analyzeSupplies(){
+    if(!scFiles.length)return;
+    const btn=document.getElementById('btn-analyze-sc');
+    btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>解析中...';btn.disabled=true;
+    try{
+        const parts=await Promise.all(scFiles.map(async f=>{
+            const b=await b64(f);
+            const mt=f.type||(f.name.toLowerCase().endsWith('pdf')?'application/pdf':f.name.toLowerCase().endsWith('heic')?'image/heic':'image/jpeg');
+            return{inlineData:{mimeType:mt,data:b}};
+        }));
+        const prompt=`Amazon・家電量販店・文具店等の領収書・注文確認書を解析しJSONで返せ。
+重要ルール:
+- category は「消耗品費」固定
+- is_reduced=false、tax_rate=10 固定
+- amount_total は税込合計金額を整数で（¥・カンマ不要）
+- Amazonの場合: ご請求額を使用。¥0の場合は商品小計を使用
+- payee はショップ名（Amazonの場合は「Amazon.co.jp」）
+- date は注文日を YYYY-MM-DD 形式で`;
+        scItems = await callAI_JSON(parts, prompt);
+        const csv=itemsToCsvDisplay(scItems);
+        document.getElementById('sc-output').value=csv;
+        document.getElementById('sc-result-container').classList.remove('hidden');
+        const ts=new Date().toLocaleString('ja-JP');
+        S.receiptHistory.unshift({id:Date.now().toString(),type:'消耗品費',date:ts,csv});save();renderReceiptHistory();
+        scFiles=[];renderFileList(scFiles,'file-list-sc','');
+    }catch(e){
+        if(e.message==='API_KEY_ERROR')customAlert('APIキーが未設定か無効です。設定タブを確認してください。','error');
+        else customAlert(`エラー: ${e.message}`,'error');
+    }finally{btn.innerHTML='<i class="fas fa-magic mr-2"></i>消耗品費レシートを解析';btn.disabled=false;}
+}
+
+// ── 一括登録（全てJSONアイテムから直接登録） ────────────
+function registerFromItems(items, defaultCategory){
+    let count=0;
+    items.forEach((it,i)=>{
+        const cat=it.category||defaultCategory;
+        const total=Math.round(it.amount_total)||0;
+        if(!total)return;
+        const rate=it.tax_rate===8?8:10;
+        const isReduced=it.is_reduced||rate===8;
+        const amount=Math.floor(total/(1+rate/100));
+        const tax=total-amount;
+        const title=formatTitle(cat, isReduced);
+        S.expenses.push({
+            id:Date.now().toString()+i,
+            category:cat,
+            payDate:it.date||new Date().toISOString().slice(0,10),
+            payee:it.payee||'',
+            title,amount,tax,total,withholding:0,net:total
+        });
+        count++;
+    });
+    return count;
+}
+
+function registerReceiptsToExpense(){
+    if(!rcItems.length){customAlert('先にAI解析を実行してください','error');return;}
+    const count=registerFromItems(rcItems,'経費');
+    if(count>0){rcItems=[];save();renderExpense();runSimulation();customAlert(`${count}件の経費を一括登録しました！`,'success');}
+}
+function registerDeliveryToExpense(){
+    if(!dvItems.length){customAlert('先にAI解析を実行してください','error');return;}
+    const count=registerFromItems(dvItems,'会議費');
+    if(count>0){dvItems=[];save();renderExpense();runSimulation();customAlert(`${count}件のデリバリー経費を会議費として登録しました！`,'success');}
+}
+function registerSuppliesToExpense(){
+    if(!scItems.length){customAlert('先にAI解析を実行してください','error');return;}
+    const count=registerFromItems(scItems,'消耗品費');
+    if(count>0){scItems=[];save();renderExpense();runSimulation();customAlert(`${count}件の消耗品費を登録しました！`,'success');}
+}
+function registerTransportToExpense(){
+    const csv=document.getElementById('tr-output').value.trim();if(!csv)return;
+    const lines=csv.split('\n');let count=0;
+    const start=lines[0].includes('取引日')||lines[0].includes('日付')?1:0;
+    for(let i=start;i<lines.length;i++){
+        const cols=lines[i].split(',');if(cols.length<2)continue;
+        const dateStr=cols[0].replace(/\//g,'-');
+        const route=(cols[1]||'').trim();
+        const total=Number((cols[2]||'0').replace(/[^0-9]/g,''))||0;
+        const title=formatTitle('交通費', false);
+        S.expenses.push({id:Date.now().toString()+i,category:'交通費',payDate:dateStr,payee:route||'モバイルSuica等',title,amount:total,tax:0,total,withholding:0,net:total});count++;
+    }
+    if(count>0){save();renderExpense();runSimulation();customAlert(`${count}件の交通費を一括登録しました！`,'success');}
+}
     if(!rcFiles.length)return;
     const btn=document.getElementById('btn-analyze');
     btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>解析中...';btn.disabled=true;
@@ -1182,208 +1432,6 @@ async function analyzeReceipts(){
     }finally{btn.innerHTML='<i class="fas fa-magic mr-2"></i>レシートをAI解析';btn.disabled=false;}
 }
 
-// デリバリーレシート解析 (NEW)
-async function analyzeDelivery(){
-    if(!dvFiles.length)return;
-    const btn=document.getElementById('btn-analyze-dv');
-    btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>解析中...';btn.disabled=true;
-    try{
-        const parts=await Promise.all(dvFiles.map(async f=>{const b=await b64(f);const mt=f.type||(f.name.toLowerCase().endsWith('heic')?'image/heic':'image/jpeg');return{inlineData:{mimeType:mt,data:b}};}));
-        const prompt=`出前館・Uber Eats等のデリバリーサービス領収書を正確に解析し、以下の厳密なCSV形式で出力せよ。
-
-【出力フォーマット（ヘッダー行必須）】
-取引日,科目,取引手段,摘要,取引先,税込金額,消費税率,軽減税率対象
-
-【絶対に守るルール】
-1. 「税込金額」は画像の合計金額の「整数のみ」。¥マーク・カンマ・円・スペース一切不要。例: 2480
-2. 科目は「会議費」固定
-3. 消費税率は「8」固定（%記号不要）
-4. 軽減税率対象は「対象」固定
-5. 全フィールドでカンマ使用禁止
-6. 日付はYYYY-MM-DD形式
-7. CSVのみ出力（前後の説明文・コードブロック不要）`;
-        const data=await fetchAI({contents:[{role:'user',parts:[{text:prompt},...parts]}]});
-        if(!data.candidates||data.candidates.length===0)throw new Error('AIが回答を生成できませんでした。');
-        const csv=extractCsv(data.candidates[0].content.parts[0].text||'');
-        document.getElementById('dv-output').value=csv;
-        document.getElementById('dv-result-container').classList.remove('hidden');
-        const ts=new Date().toLocaleString('ja-JP');
-        S.receiptHistory.unshift({id:Date.now().toString(),type:'デリバリー',date:ts,csv});save();renderReceiptHistory();
-        dvFiles=[];renderFileList(dvFiles,'file-list-dv','');
-    }catch(e){
-        if(e.message==='API_KEY_ERROR')customAlert('APIキーが未設定か無効です。設定タブを確認してください。','error');
-        else customAlert(`エラー: ${e.message}`,'error');
-    }finally{btn.innerHTML='<i class="fas fa-magic mr-2"></i>デリバリーレシートを解析';btn.disabled=false;}
-}
-
-// 交通費AI抽出（交通費のみ・年補完）
-async function analyzeTransport(){
-    const text=document.getElementById('tr-text-input').value.trim();
-    if(!trFiles.length&&!text){customAlert('画像かテキストを入力してください','error');return;}
-    const btn=document.getElementById('btn-analyze-tr');
-    btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>抽出中...';btn.disabled=true;
-    try{
-        const parts=[];
-        if(text)parts.push({text:text});
-        const imgs=await Promise.all(trFiles.map(async f=>{const b=await b64(f);const mt=f.type||(f.name.toLowerCase().endsWith('heic')?'image/heic':'image/jpeg');return{inlineData:{mimeType:mt,data:b}};}));
-        parts.push(...imgs);
-        const currentYear=new Date().getFullYear();
-        const prompt=`Suica・ICカード・交通系ICの利用履歴から「交通費のみ」をCSV形式で出力せよ。
-以下を厳守すること:
-- 電車・バス・タクシー・新幹線等の交通費のみを抽出すること
-- コンビニ・飲食・物販・チャージ・その他交通費以外の取引は必ず除外すること
-- 日付に年の記載がない場合は「${currentYear}年」として補完し、YYYY-MM-DD形式で出力すること
-出力形式(ヘッダーなし):
-取引日(YYYY-MM-DD),摘要(乗車区間等),金額(数字のみ)
-カンマを値に含めない。`;
-        parts.unshift({text:prompt});
-        const data=await fetchAI({contents:[{role:'user',parts}]});
-        if(!data.candidates||data.candidates.length===0)throw new Error('AI回答生成エラー');
-        const csv=extractCsv(data.candidates[0].content.parts[0].text||'');
-        document.getElementById('tr-output').value=csv;
-        document.getElementById('tr-result-container').classList.remove('hidden');
-        const ts=new Date().toLocaleString('ja-JP');
-        S.receiptHistory.unshift({id:Date.now().toString(),type:'交通費',date:ts,csv});save();renderReceiptHistory();
-        trFiles=[];renderFileList(trFiles,'file-list-tr','');
-    }catch(e){customAlert(`抽出エラー: ${e.message}`,'error');}
-    finally{btn.innerHTML='<i class="fas fa-magic mr-2"></i>交通費を抽出';btn.disabled=false;}
-}
-
-// 一括登録
-// CSV列ズレ対策: cols[startIdx]以降を結合して最初の3桁以上の数値を金額として取得
-// 金額パース: 各列を順にチェックし、最初に見つかる妥当な整数金額を返す
-// AIが¥1,180と書くと列ズレするため、列5以降を結合して数字列を全て取得し
-// 最大のもの（=合計金額相当）を採用する戦略に変更
-function extractAmount(cols, startIdx){
-    // まず cols[startIdx] 単体で試みる（カンマ・¥除去後）
-    const raw=(cols[startIdx]||'').replace(/[¥￥,\s円]/g,'').trim();
-    const direct=parseInt(raw,10);
-    if(!isNaN(direct)&&direct>=10)return direct;
-    // 列ズレ対策: startIdx以降を結合して最大の整数を金額とみなす
-    const joined=cols.slice(startIdx).join('').replace(/[¥￥,\s円]/g,'');
-    const nums=(joined.match(/\d+/g)||[]).map(Number).filter(n=>n>=10);
-    if(!nums.length)return 0;
-    // 最大値を合計金額とみなす（小計・税額・合計が混在する場合、合計が最大のはず）
-    return Math.max(...nums);
-}
-
-// 摘要: カテゴリごとに完全固定（AIの出力は無視）
-function formatTitle(category){
-    if(category==='消耗品費') return '業務にて使用のため';
-    if(category==='交通費')   return '業務移動のため';
-    if(category==='会議費')   return '○○様との打ち合わせのため';
-    if(category==='接待交際費') return '○○様との打ち合わせのため';
-    return '業務のため';
-}
-
-function registerReceiptsToExpense(){
-    const csv=document.getElementById('ai-output').value.trim();if(!csv)return;
-    const lines=csv.split('\n');let count=0;const start=lines[0].includes('取引日')?1:0;
-    for(let i=start;i<lines.length;i++){
-        const cols=lines[i].split(',');if(cols.length<6)continue;
-        const dateStr=cols[0].replace(/\//g,'-');
-        const aiCat=(cols[1]||'').trim();
-        let cat='経費';
-        if(['会議費','接待交際費','消耗品費','交通費','外注費'].includes(aiCat))cat=aiCat;
-        else if(aiCat.includes('会議'))cat='会議費';
-        else if(aiCat.includes('交際')||aiCat.includes('接待'))cat='接待交際費';
-        else if(aiCat.includes('消耗'))cat='消耗品費';
-        const payee=(cols[4]||'レシート店舗').replace(/[¥￥]/g,'').trim();
-        const total=extractAmount(cols,5);
-        const rate=cols[6]&&cols[6].includes('8')?8:10;
-        const isKeigen=rate===8||(cols[7]&&cols[7].includes('対象'));
-        let title=formatTitle(cat);
-        if(isKeigen&&cat!=='消耗品費')title+=' ※軽減税率対象';
-        const amount=Math.floor(total/(1+(rate/100)));const tax=total-amount;
-        S.expenses.push({id:Date.now().toString()+i,category:cat,payDate:dateStr,payee,title,amount,tax,total,withholding:0,net:total});count++;
-    }
-    if(count>0){save();renderExpense();runSimulation();customAlert(`${count}件の経費を一括登録しました！`,'success');}
-}
-
-function registerDeliveryToExpense(){
-    const csv=document.getElementById('dv-output').value.trim();if(!csv)return;
-    const lines=csv.split('\n');let count=0;const start=lines[0].includes('取引日')?1:0;
-    for(let i=start;i<lines.length;i++){
-        const cols=lines[i].split(',');if(cols.length<6)continue;
-        const dateStr=cols[0].replace(/\//g,'-');
-        const payee=(cols[4]||'デリバリーサービス').replace(/[¥￥]/g,'').trim();
-        const total=extractAmount(cols,5);
-        const amount=Math.floor(total/1.08);const tax=total-amount;
-        const title=formatTitle('会議費')+' ※軽減税率対象';
-        S.expenses.push({id:'dv-'+Date.now()+'-'+i,category:'会議費',payDate:dateStr,payee,title,amount,tax,total,withholding:0,net:total});count++;
-    }
-    if(count>0){save();renderExpense();runSimulation();customAlert(`${count}件のデリバリー経費を会議費として登録しました！`,'success');}
-}
-
-// 消耗品費レシート解析
-async function analyzeSupplies(){
-    if(!scFiles.length)return;
-    const btn=document.getElementById('btn-analyze-sc');
-    btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>解析中...';btn.disabled=true;
-    try{
-        const parts=await Promise.all(scFiles.map(async f=>{
-            const b=await b64(f);
-            const mt=f.type||( f.name.toLowerCase().endsWith('pdf')?'application/pdf': f.name.toLowerCase().endsWith('heic')?'image/heic':'image/jpeg');
-            return{inlineData:{mimeType:mt,data:b}};
-        }));
-        const prompt=`Amazon・家電量販店・文具店等の領収書・注文確認書を正確に解析し、以下の厳密なCSV形式で出力せよ。
-
-【出力フォーマット（ヘッダー行必須）】
-取引日,科目,取引手段,摘要,取引先,税込金額,消費税率,軽減税率対象
-
-【絶対に守るルール】
-1. 「税込金額」は画像に記載された税込合計金額の「整数のみ」。¥マーク・カンマ・円・スペース一切不要。例: 1180
-2. Amazonの場合: 「ご請求額」を使用。ギフトカード等で¥0の場合は「商品の小計」を使用。
-3. 科目は「消耗品費」固定
-4. 消費税率は「10」固定（%記号不要）
-5. 軽減税率対象は「対象外」固定
-6. 取引先はショップ・販売元名（Amazonの場合は「Amazon.co.jp」）
-7. 全フィールドでカンマ使用禁止
-8. 日付はYYYY-MM-DD形式
-9. CSVのみ出力（前後の説明文・コードブロック不要）`;
-        const data=await fetchAI({contents:[{role:'user',parts:[{text:prompt},...parts]}]});
-        if(!data.candidates||data.candidates.length===0)throw new Error('AIが回答を生成できませんでした。');
-        const csv=extractCsv(data.candidates[0].content.parts[0].text||'');
-        document.getElementById('sc-output').value=csv;
-        document.getElementById('sc-result-container').classList.remove('hidden');
-        const ts=new Date().toLocaleString('ja-JP');
-        S.receiptHistory.unshift({id:Date.now().toString(),type:'消耗品費',date:ts,csv});save();renderReceiptHistory();
-        scFiles=[];renderFileList(scFiles,'file-list-sc','');
-    }catch(e){
-        if(e.message==='API_KEY_ERROR')customAlert('APIキーが未設定か無効です。設定タブを確認してください。','error');
-        else customAlert(`エラー: ${e.message}`,'error');
-    }finally{btn.innerHTML='<i class="fas fa-magic mr-2"></i>消耗品費レシートを解析';btn.disabled=false;}
-}
-function registerSuppliesToExpense(){
-    const csv=document.getElementById('sc-output').value.trim();if(!csv)return;
-    const lines=csv.split('\n');let count=0;const start=lines[0].includes('取引日')?1:0;
-    for(let i=start;i<lines.length;i++){
-        const cols=lines[i].split(',');if(cols.length<6)continue;
-        const dateStr=cols[0].replace(/\//g,'-');
-        const payee=(cols[4]||'Amazon.co.jp').replace(/[¥￥]/g,'').trim();
-        const total=extractAmount(cols,5);
-        if(!total)continue;
-        const amount=Math.floor(total/1.1);const tax=total-amount;
-        const title=formatTitle('消耗品費');
-        S.expenses.push({id:'sc-'+Date.now()+'-'+i,category:'消耗品費',payDate:dateStr,payee,title,amount,tax,total,withholding:0,net:total});count++;
-    }
-    if(count>0){save();renderExpense();runSimulation();customAlert(`${count}件の消耗品費を登録しました！`,'success');}
-}
-
-function registerTransportToExpense(){
-    const csv=document.getElementById('tr-output').value.trim();if(!csv)return;
-    const lines=csv.split('\n');let count=0;const start=lines[0].includes('取引日')?1:0;
-    for(let i=start;i<lines.length;i++){
-        const cols=lines[i].split(',');if(cols.length<3)continue;
-        const dateStr=cols[0].replace(/\//g,'-');
-        const aiTitle=(cols[1]||'').trim();
-        const total=Number(cols[2].replace(/[^0-9]/g,''))||0;
-        const title=aiTitle||'業務移動のため';
-        S.expenses.push({id:Date.now().toString()+i,category:'交通費',payDate:dateStr,payee:'モバイルSuica等',title,amount:total,tax:0,total,withholding:0,net:total});count++;
-    }
-    if(count>0){save();renderExpense();runSimulation();customAlert(`${count}件の交通費を一括登録しました！`,'success');}
-}
-
 function copyCsv(id){const text=document.getElementById(id).value;if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>customAlert('コピーしました！','success')).catch(()=>{fallbackCopy(text);});}else{fallbackCopy(text);}}
 function fallbackCopy(text){const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');customAlert('コピーしました！','success');}catch(e){}document.body.removeChild(ta);}
 function downloadCsv(id,prefix){const text=document.getElementById(id).value;const bom=new Uint8Array([0xEF,0xBB,0xBF]);const blob=new Blob([bom,text],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`${prefix}_${new Date().toISOString().slice(0,10)}.csv`;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);}
@@ -1410,29 +1458,88 @@ function viewHistory(id){
 function delHistory(id){customConfirm('この履歴を削除しますか？',()=>{S.receiptHistory=S.receiptHistory.filter(x=>x.id!==id);save();renderReceiptHistory();});}
 
 // ====== Firebase Cloud Sync ======
+// ユーザーのFirebaseプロジェクト設定
+const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyA1tuWKJRYlA48KsF-Vd3Tzo5zAy8FV3cQ",
+    authDomain: "zaimu-muraoka.firebaseapp.com",
+    projectId: "zaimu-muraoka",
+    storageBucket: "zaimu-muraoka.firebasestorage.app",
+    messagingSenderId: "783805203277",
+    appId: "1:783805203277:web:fe085d988172a041d7ad04"
+};
+const FS_DOC_PATH = ['erp_data','cr_erp_shared']; // Firestore: コレクション名/ドキュメントID
+
+let _fsDoc=null, _isSyncing=false;
+
+// 既存のsave()をFirebase対応に再定義（上書きではなくグローバル再宣言）
+async function save(){
+    S.lastUpdated = new Date().toISOString();
+    // localStorage へ常に保存
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); }catch(e){ console.error(e); }
+    updateLastUpdatedLabel();
+    const ic=document.getElementById('sync-icon'), tx=document.getElementById('sync-text');
+    // Firestore が使えるなら同期
+    if(_fsDoc && !_isSyncing){
+        ic.className='fas fa-sync fa-spin text-blue-500'; tx.textContent='同期中...';
+        try{
+            const {setDoc} = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+            await setDoc(_fsDoc, {state: JSON.stringify(S), updatedAt: S.lastUpdated});
+            ic.className='fas fa-cloud text-blue-500'; tx.textContent='クラウド同期済';
+        }catch(e){
+            console.error('Firestore write:', e);
+            ic.className='fas fa-exclamation-triangle text-amber-500'; tx.textContent='同期エラー';
+        }
+    } else {
+        ic.className='fas fa-check-circle text-emerald-500'; tx.textContent='ローカル保存済';
+        clearTimeout(save._t);
+        save._t = setTimeout(()=>{ic.className='fas fa-hdd text-slate-400'; tx.textContent='ローカル保存モード';}, 2000);
+    }
+}
+
+// Firebase初期化（失敗してもアプリ全体に影響しない）
 (async()=>{
     try{
-        const{initializeApp}=await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
-        const{getAuth,signInWithCustomToken,signInAnonymously,onAuthStateChanged}=await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
-        const{getFirestore,doc,setDoc,onSnapshot}=await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
-        const firebaseConfig=JSON.parse(typeof __firebase_config!=='undefined'?__firebase_config:'{}');
-        const app=initializeApp(firebaseConfig);const auth=getAuth(app);const db=getFirestore(app);
-        const appId=typeof __app_id!=='undefined'?__app_id:'default-app-id';
-        let currentUser=null,isSyncing=false;
-        window.save=async function(){
-            S.lastUpdated=new Date().toISOString();
-            try{localStorage.setItem(STORAGE_KEY,JSON.stringify(S));}catch(e){}
-            updateLastUpdatedLabel();
-            const ic=document.getElementById('sync-icon'),tx=document.getElementById('sync-text');
-            if(!currentUser||isSyncing){ic.className='fas fa-check-circle text-emerald-500';tx.textContent='ローカル保存済';return;}
-            ic.className='fas fa-sync fa-spin text-blue-500';tx.textContent='同期中...';
-            try{const docRef=doc(db,'artifacts',appId,'public','data','erp_state','shared');await setDoc(docRef,{state:JSON.stringify(S)});ic.className='fas fa-cloud text-blue-500';tx.textContent='クラウド保存済';}
-            catch(e){ic.className='fas fa-exclamation-triangle text-amber-500';tx.textContent='同期エラー';}
-        };
-        const initAuth=async()=>{if(typeof __initial_auth_token!=='undefined'&&__initial_auth_token)await signInWithCustomToken(auth,__initial_auth_token);else await signInAnonymously(auth);};
-        onAuthStateChanged(auth,(user)=>{currentUser=user;if(user){const docRef=doc(db,'artifacts',appId,'public','data','erp_state','shared');onSnapshot(docRef,(docSnap)=>{if(docSnap.exists()){const data=docSnap.data();if(data.state){const newState=JSON.parse(data.state);if(newState.lastUpdated!==S.lastUpdated){isSyncing=true;S=migrate(newState);renderAll();isSyncing=false;}}}else{window.save();}});}});
-        await initAuth();
-    }catch(e){console.error("Cloud failed",e);}
+        const {initializeApp}     = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
+        const {getAuth, signInAnonymously, onAuthStateChanged} = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
+        const {getFirestore, doc, onSnapshot} = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+
+        const app  = initializeApp(FIREBASE_CONFIG);
+        const auth = getAuth(app);
+        const db   = getFirestore(app);
+
+        onAuthStateChanged(auth, user => {
+            if(!user) return;
+            const docRef = doc(db, ...FS_DOC_PATH);
+            _fsDoc = docRef; // save() から書き込めるようにする
+
+            // リアルタイム受信：他デバイスの更新を自動反映
+            onSnapshot(docRef, snap => {
+                if(!snap.exists()) return;
+                const remote = JSON.parse(snap.data().state || '{}');
+                if(remote.lastUpdated && remote.lastUpdated !== S.lastUpdated){
+                    _isSyncing = true;
+                    S = migrate(remote);
+                    renderAll();
+                    _isSyncing = false;
+                    const ic=document.getElementById('sync-icon'), tx=document.getElementById('sync-text');
+                    ic.className='fas fa-cloud text-blue-500'; tx.textContent='他デバイスから同期';
+                }
+            }, err => {
+                // Firestoreルール未設定時など → ローカルモードに留まる
+                console.warn('Firestore listen error (check rules):', err.message);
+                _fsDoc = null;
+                const ic=document.getElementById('sync-icon'), tx=document.getElementById('sync-text');
+                ic.className='fas fa-exclamation-triangle text-amber-400';
+                tx.textContent='ルール要設定（ローカルのみ）';
+            });
+        });
+
+        await signInAnonymously(auth);
+
+    }catch(e){
+        console.warn('Firebase init failed, localStorage only:', e.message);
+        // ここで失敗してもsave()はlocalStorageで動き続ける
+    }
 })();
 </script>
 </body>

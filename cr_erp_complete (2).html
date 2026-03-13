@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>CR Finance ERP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','Noto Sans JP','sans-serif']}}}}</script>
+    <style>
+        body{background:#f8fafc}
+        .tab-content{display:none}
+        .tab-content.active{display:block;animation:fadeIn .2s ease}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+        .nav-item{transition:all .2s;cursor:pointer}
+        .nav-item.active{background:#1e293b;color:#fff;border-left:4px solid #3b82f6}
+        .nav-item:not(.active):hover{background:#334155;color:#e2e8f0}
+        ::-webkit-scrollbar{width:6px;height:6px}
+        ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+        .modal-bg{display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);z-index:50;align-items:center;justify-content:center;padding:1rem}
+        .modal-bg.open{display:flex}
+        .drag-over{background:#e0e7ff!important;border-color:#4f46e5!important}
+        /* ===== Responsive Fixes ===== */
+        .kpi-number{font-size:clamp(1.1rem,5.5vw,2.5rem);line-height:1.1}
+        .kpi-number-lg{font-size:clamp(1.3rem,6vw,3rem);line-height:1.1}
+        .flow-number{font-size:clamp(1rem,4vw,1.875rem);line-height:1.2}
+        @media(max-width:640px){
+            .resp-table th,.resp-table td{padding:0.5rem 0.375rem;font-size:0.7rem}
+            .resp-table th:nth-child(5),.resp-table td:nth-child(5),
+            .resp-table th:nth-child(6),.resp-table td:nth-child(6){display:none}
+        }
+        .chart-container{position:relative;max-width:180px;margin:0 auto}
+        @media(max-width:768px){.chart-container{max-width:140px}}
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden text-slate-800">
+
+<!-- ===== SIDEBAR ===== -->
+<aside id="sidebar" class="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-20 flex-shrink-0 transition-transform duration-300 md:translate-x-0 -translate-x-full fixed md:relative h-full">
+    <div class="p-6 border-b border-slate-800">
+        <h1 class="text-xl font-bold text-white flex items-center leading-tight">
+            <i class="fas fa-layer-group text-blue-500 mr-3"></i>
+            <span>CR ERP<br><span class="text-[10px] text-slate-400 font-normal block uppercase tracking-widest">Freelance OS</span></span>
+        </h1>
+    </div>
+    <nav class="flex-1 overflow-y-auto py-4">
+        <ul class="space-y-1 px-3">
+            <li class="pb-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Core</li>
+            <li><button id="nav-dashboard" onclick="switchTab('dashboard')" class="nav-item active w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg text-left gap-2"><i class="fas fa-chart-pie text-blue-400 w-5"></i>ダッシュボード</button></li>
+            <li><button id="nav-income"    onclick="switchTab('income')"    class="nav-item w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg text-left gap-2"><i class="fas fa-file-invoice-dollar text-emerald-400 w-5"></i>収入管理表</button></li>
+            <li><button id="nav-expense"   onclick="switchTab('expense')"   class="nav-item w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg text-left gap-2"><i class="fas fa-hand-holding-usd text-red-400 w-5"></i>支出管理表</button></li>
+            <li class="pt-4 pb-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Management</li>
+            <li><button id="nav-settings"  onclick="switchTab('settings')"  class="nav-item w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg text-left gap-2"><i class="fas fa-sliders-h text-amber-400 w-5"></i>設定・マスター</button></li>
+            <li><button id="nav-tools"     onclick="switchTab('tools')"     class="nav-item w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg text-left gap-2"><i class="fas fa-robot text-purple-400 w-5"></i>経費AI・ツール</button></li>
+        </ul>
+        <div class="px-4 mt-6 mb-4">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"><i class="fas fa-pen-nib mr-1"></i>Quick Memo</label>
+            <textarea id="quick-memo" onchange="saveMemo()" rows="5" class="w-full bg-slate-800 text-slate-300 border border-slate-700 rounded p-2 text-xs resize-none focus:outline-none focus:border-blue-500" placeholder="インボイス番号や共有事項をメモ..."></textarea>
+        </div>
+    </nav>
+    <div class="p-4 border-t border-slate-800">
+        <div class="bg-slate-800 p-3 rounded-lg flex items-center justify-between">
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs mr-2">CD</div>
+                <div><p class="text-xs font-bold text-white">Tax Profile</p><p class="text-[10px] text-slate-400">Optimized</p></div>
+            </div>
+            <i class="fas fa-check-circle text-emerald-500"></i>
+        </div>
+    </div>
+</aside>
+
+<!-- Mobile Header -->
+<div class="md:hidden fixed top-0 w-full bg-slate-900 text-white p-4 flex justify-between items-center z-10 shadow-md">
+    <h1 class="font-bold"><i class="fas fa-layer-group text-blue-500 mr-2"></i>CR ERP</h1>
+    <button onclick="toggleSidebar()" class="text-white"><i class="fas fa-bars text-xl"></i></button>
+</div>
+<div id="mobile-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-10 hidden md:hidden"></div>
+
+<!-- ===== MAIN ===== -->
+<main class="flex-1 overflow-y-auto pt-16 md:pt-0" id="main-content">
+<div class="p-3 sm:p-6 md:p-10 max-w-7xl mx-auto">
+
+    <!-- Top Bar -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-slate-200 gap-3">
+        <div class="text-[10px] sm:text-xs font-bold text-slate-500 bg-white px-3 py-1.5 rounded border border-slate-200 shadow-sm flex items-center shrink-0">
+            <i class="fas fa-user-circle mr-2 text-blue-500"></i>CD / インボイス2割特例 / 青色65万
+        </div>
+        <div class="flex items-center justify-between w-full sm:w-auto flex-wrap gap-3">
+            <div class="flex items-center gap-2 flex-wrap">
+                <button onclick="gotoApiSettings()" class="text-[10px] sm:text-xs bg-slate-800 hover:bg-slate-700 text-white px-2 sm:px-3 py-1.5 rounded shadow-sm font-bold flex items-center transition-colors">
+                    <i class="fas fa-key text-yellow-400 mr-1"></i>API設定
+                </button>
+                <button onclick="downloadPage('png')" class="text-[10px] sm:text-xs bg-white hover:bg-slate-50 text-slate-700 px-2 sm:px-3 py-1.5 rounded border border-slate-300 shadow-sm font-bold flex items-center">
+                    <i class="fas fa-image text-blue-500 mr-1"></i>PNG
+                </button>
+                <button onclick="downloadPage('pdf')" class="text-[10px] sm:text-xs bg-white hover:bg-slate-50 text-slate-700 px-2 sm:px-3 py-1.5 rounded border border-slate-300 shadow-sm font-bold flex items-center">
+                    <i class="fas fa-file-pdf text-red-500 mr-1"></i>PDF
+                </button>
+            </div>
+            <div class="flex flex-col items-end">
+                <div class="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-emerald-600">
+                    <i id="sync-icon" class="fas fa-hdd"></i><span id="sync-text">ローカル保存モード</span>
+                </div>
+                <div id="last-updated-label" class="text-[9px] text-slate-400 mt-0.5">最終更新: --</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== DASHBOARD ==================== -->
+    <div id="tab-dashboard" class="tab-content active">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4 border-b pb-4">
+            <div>
+                <h2 class="text-xl sm:text-3xl font-bold text-slate-800">Financial Dashboard</h2>
+                <p class="text-xs sm:text-sm text-slate-500 mt-1">手取りの最大化と、安全な資金振り分け</p>
+            </div>
+            <div class="flex items-center justify-between w-full md:w-auto gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+                <button onclick="changeDashMonth(-1)" class="p-1.5 text-slate-400 hover:text-blue-500 rounded"><i class="fas fa-chevron-left"></i></button>
+                <div class="flex flex-col items-center min-w-[110px]">
+                    <label class="text-[10px] font-bold text-slate-500 mb-1">対象月</label>
+                    <input type="month" id="dash-month" class="bg-transparent border-none p-0 text-sm font-bold focus:ring-0 cursor-pointer text-center" onchange="dashMonthChanged()">
+                </div>
+                <button onclick="changeDashMonth(1)" class="p-1.5 text-slate-400 hover:text-blue-500 rounded"><i class="fas fa-chevron-right"></i></button>
+                <div class="w-px h-6 bg-slate-300 mx-1"></div>
+                <div class="flex bg-slate-100 rounded p-1 gap-1">
+                    <button id="btn-mode-auto"   onclick="setDashMode('auto')"   class="px-2 py-1.5 text-xs font-bold rounded-md bg-white text-blue-700 shadow-sm"><i class="fas fa-link mr-1"></i>自動</button>
+                    <button id="btn-mode-manual" onclick="setDashMode('manual')" class="px-2 py-1.5 text-xs font-bold rounded-md text-slate-500">手入力</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <!-- LEFT COLUMN -->
+            <div class="lg:col-span-5 space-y-5">
+                <!-- Monthly variable costs -->
+                <div class="bg-indigo-50/50 rounded-2xl border border-indigo-100 p-5 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-indigo-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">月ごとに自動保存</div>
+                    <h3 class="font-bold text-indigo-900 border-b border-indigo-200 pb-3 mb-4"><i class="fas fa-home text-indigo-500 mr-2"></i><span id="dash-month-label"></span>の変動費・按分</h3>
+                    <p class="text-[10px] text-slate-500 mb-4">対象月ごとの実際の支払総額を入力してください。</p>
+                    <div id="dash-monthly-costs" class="space-y-3"></div>
+                </div>
+                <!-- Summary -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                    <div class="flex justify-between items-center border-b pb-3 mb-4">
+                        <h3 class="font-bold text-slate-800 text-sm"><i class="fas fa-calculator text-slate-400 mr-2"></i>対象月の集計結果</h3>
+                        <span id="dash-mode-indicator" class="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded">自動連動中</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">総売上（発生・請求ベース）</label>
+                            <div class="relative"><span class="absolute left-3 top-2.5 text-slate-400">¥</span>
+                            <input type="number" id="dash-revenue" class="w-full bg-slate-50 border rounded-lg py-2 pl-8 pr-3 font-bold disabled:opacity-60 disabled:bg-slate-100" oninput="runSimulation()" readonly></div>
+                            <p id="dash-rev-help" class="text-[10px] text-slate-400 mt-1">※収入管理表の対象月の「請求日(発生日)」から合算</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">経費合計（按分＋支出管理表）</label>
+                            <div class="relative"><span class="absolute left-3 top-2.5 text-slate-400">¥</span>
+                            <input type="number" id="dash-expense" class="w-full bg-slate-50 border rounded-lg py-2 pl-8 pr-3 font-bold disabled:opacity-60 disabled:bg-slate-100" oninput="runSimulation()" readonly></div>
+                            <p id="dash-exp-help" class="text-[10px] text-slate-400 mt-1">※按分経費＋支出管理表＋サブスクから合算</p>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-xl border space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-bold text-slate-500">源泉徴収 考慮（一律）</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="dash-withholding" class="sr-only peer" onchange="onWithholdingChange()" checked>
+                                    <div class="w-9 h-5 bg-slate-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Cash flow -->
+                <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                    <div class="bg-slate-800 p-4 text-white"><h3 class="font-bold text-sm"><i class="fas fa-random text-blue-400 mr-2"></i>対象月の資金振り分け</h3></div>
+                    <div class="flex items-center p-4 border-b bg-slate-50"><div><p class="text-[10px] font-bold text-slate-500">Step 1: 手元に入るお金</p><p class="flow-number font-bold font-mono text-slate-800" id="flow-income">¥0</p></div></div>
+                    <div class="flex items-center p-4 border-b"><div><p class="text-[10px] font-bold text-red-500"><i class="fas fa-lock mr-1"></i>Step 2: 税金用 防衛口座へ</p><p class="flow-number font-bold font-mono text-red-600" id="flow-tax">▲ ¥0</p></div></div>
+                    <div class="flex items-center p-4 border-b"><div><p class="text-[10px] font-bold text-amber-600">Step 3: 固定費＋支出表</p><p class="flow-number font-bold font-mono text-amber-700" id="flow-fixed">▲ ¥0</p></div></div>
+                    <div class="flex items-center p-4 border-b relative group">
+                        <div><p class="text-[10px] font-bold text-emerald-600">Step 4: 積立（NISA/共済）</p><p class="flow-number font-bold font-mono text-emerald-700" id="flow-invest">▲ ¥0</p></div>
+                        <button onclick="switchTab('settings')" class="absolute right-4 text-xs text-slate-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition"><i class="fas fa-cog"></i></button>
+                    </div>
+                    <div class="flex items-center p-5 bg-blue-600 text-white rounded-b-xl">
+                        <div><p class="text-xs font-bold text-blue-200 uppercase tracking-widest mb-1">Result: 完全に自由な資金</p><p class="kpi-number-lg font-extrabold font-mono" id="flow-free">¥0</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN -->
+            <div class="lg:col-span-7 space-y-5">
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-gradient-to-br from-red-500 to-red-700 rounded-2xl p-4 sm:p-6 text-white shadow-lg relative overflow-hidden">
+                        <div class="absolute -right-4 -bottom-4 opacity-10"><i class="fas fa-piggy-bank text-8xl"></i></div>
+                        <h4 class="text-[10px] sm:text-xs font-bold text-red-200 uppercase mb-2">毎月確保すべき税金プール</h4>
+                        <div class="kpi-number font-extrabold font-mono" id="kpi-tax-pool">¥0</div>
+                        <p class="text-[10px] text-red-200 mt-2 bg-red-800/50 inline-block px-2 py-1 rounded">源泉徴収 <span id="kpi-withheld-label">未考慮</span></p>
+                    </div>
+                    <div class="bg-white border rounded-2xl p-4 sm:p-6 shadow-sm relative overflow-hidden">
+                        <div class="absolute -right-4 -bottom-4 text-emerald-50 opacity-50"><i class="fas fa-gift text-8xl"></i></div>
+                        <h4 class="text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">ふるさと納税 上限目安</h4>
+                        <div class="kpi-number font-extrabold text-slate-800 font-mono" id="kpi-furusato">¥0</div>
+                        <p class="text-[10px] text-emerald-600 mt-1 font-bold"><i class="fas fa-check mr-1"></i>税金口座から支払い可能</p>
+                        <p class="text-[9px] text-slate-400 mt-1 leading-tight">算出: 住民税所得割×20%÷(1-所得税率×1.021-10%)+2,000円</p>
+                    </div>
+                </div>
+
+                <!-- Annual Forecast -->
+                <div class="bg-white rounded-2xl shadow-sm border p-5">
+                    <h3 class="font-bold text-slate-800 border-b pb-3 mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                        <span class="text-sm sm:text-base"><i class="fas fa-chart-line text-purple-500 mr-2"></i>本年実績 ＆ 年間着地予測</span>
+                        <span class="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded w-fit" id="fc-logic-label">1〜○月までの平均×12で算出</span>
+                    </h3>
+                    <div class="space-y-4">
+                        <!-- Cumulative -->
+                        <div class="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-500 mb-1">累計売上(<span id="fc-accum-months">1</span>ヶ月)</p>
+                                <p class="font-mono text-lg sm:text-2xl font-bold text-slate-800 truncate" id="fc-accum-revenue">¥0</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-500 mb-1">累計経費</p>
+                                <p class="font-mono text-lg sm:text-2xl font-bold text-slate-800 truncate" id="fc-accum-expense">¥0</p>
+                            </div>
+                        </div>
+                        <!-- Bar chart with amounts -->
+                        <div>
+                            <div class="flex justify-between text-xs font-bold text-slate-600 mb-1">
+                                <span>予測ベースの年間売上</span><span class="font-mono text-sm" id="fc-revenue">¥0</span>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-4 overflow-hidden flex">
+                                <div class="bg-blue-400 h-4 rounded-l-full transition-all duration-500" id="bar-income" style="width:50%"></div>
+                                <div class="bg-amber-400 h-4 transition-all duration-500" id="bar-expense" style="width:15%"></div>
+                                <div class="bg-red-400 h-4 rounded-r-full transition-all duration-500" id="bar-tax" style="width:35%"></div>
+                            </div>
+                            <!-- Bar amount labels -->
+                            <div class="grid grid-cols-3 gap-1 mt-2">
+                                <div class="text-center">
+                                    <p class="text-[10px] font-mono font-bold text-blue-600 truncate" id="bar-income-amt">¥0</p>
+                                    <p class="text-[9px] text-slate-400 flex items-center justify-center"><span class="w-2 h-2 bg-blue-400 rounded-full mr-1 flex-shrink-0"></span>手取り</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-[10px] font-mono font-bold text-amber-600 truncate" id="bar-expense-amt">¥0</p>
+                                    <p class="text-[9px] text-slate-400 flex items-center justify-center"><span class="w-2 h-2 bg-amber-400 rounded-full mr-1 flex-shrink-0"></span>経費</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-[10px] font-mono font-bold text-red-600 truncate" id="bar-tax-amt">¥0</p>
+                                    <p class="text-[9px] text-slate-400 flex items-center justify-center"><span class="w-2 h-2 bg-red-400 rounded-full mr-1 flex-shrink-0"></span>税・社保</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Tax breakdown -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t">
+                            <div class="bg-slate-50 p-2 sm:p-3 rounded-lg border">
+                                <p class="text-[9px] sm:text-[10px] text-slate-500 mb-1">所得税（追加払）</p>
+                                <p class="font-mono font-bold text-red-600 text-xs sm:text-sm" id="fc-income-tax">¥0</p>
+                            </div>
+                            <div class="bg-slate-50 p-2 sm:p-3 rounded-lg border">
+                                <p class="text-[9px] sm:text-[10px] text-slate-500 mb-1">住民税（翌年）</p>
+                                <p class="font-mono font-bold text-red-600 text-xs sm:text-sm" id="fc-resident-tax">¥0</p>
+                            </div>
+                            <div class="bg-slate-50 p-2 sm:p-3 rounded-lg border">
+                                <p class="text-[9px] sm:text-[10px] text-slate-500 mb-0.5">個人事業税</p>
+                                <p class="font-mono font-bold text-red-600 text-xs sm:text-sm" id="fc-enterprise-tax">¥0</p>
+                                <p class="text-[8px] text-slate-400 mt-0.5 leading-tight">事業所得-290万×5%</p>
+                            </div>
+                            <div class="bg-slate-50 p-2 sm:p-3 rounded-lg border">
+                                <p class="text-[9px] sm:text-[10px] text-slate-500 mb-1">消費税（2割特例）</p>
+                                <p class="font-mono font-bold text-red-600 text-xs sm:text-sm" id="fc-consumption-tax">¥0</p>
+                            </div>
+                        </div>
+                        <div class="bg-red-50 p-3 rounded-lg border border-red-100 flex justify-between items-center gap-2">
+                            <p class="text-xs font-bold text-red-800"><i class="fas fa-exclamation-triangle mr-1"></i>翌年の後払い税金 合計予測</p>
+                            <p class="font-mono font-extrabold text-red-700 text-base sm:text-lg shrink-0" id="fc-total-tax">¥0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pie Charts -->
+                <div class="bg-white rounded-2xl shadow-sm border p-5">
+                    <h3 class="font-bold text-slate-800 border-b pb-3 mb-4 text-sm"><i class="fas fa-chart-pie text-indigo-500 mr-2"></i>収支内訳チャート</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-500 text-center mb-2">対象月の内訳</p>
+                            <div class="chart-container"><canvas id="chart-monthly"></canvas></div>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-500 text-center mb-2">累計 (1〜<span id="chart-accum-label">?</span>月) の内訳</p>
+                            <div class="chart-container"><canvas id="chart-cumulative"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== INCOME ==================== -->
+    <div id="tab-income" class="tab-content">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-end mb-6 border-b pb-4 gap-4">
+            <div><h2 class="text-2xl sm:text-3xl font-bold text-slate-800">Income Management</h2><p class="text-xs sm:text-sm text-slate-500 mt-1">クライアントからの報酬管理</p></div>
+            <button onclick="openIncomeModal()" class="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-plus mr-2"></i>新規報酬を追加</button>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm resp-table" style="min-width:600px">
+                    <thead><tr class="bg-slate-50 border-b text-slate-500 text-xs">
+                        <th class="p-3 font-bold">入金日/請求日</th><th class="p-3 font-bold">クライアント/案件</th>
+                        <th class="p-3 font-bold text-right">税抜</th><th class="p-3 font-bold text-right">消費税</th>
+                        <th class="p-3 font-bold text-right">税込</th><th class="p-3 font-bold text-right">源泉</th>
+                        <th class="p-3 font-bold text-right text-emerald-700">実入金</th>
+                        <th class="p-3 font-bold text-center">状態</th><th class="p-3 font-bold text-center">操作</th>
+                    </tr></thead>
+                    <tbody id="income-body" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+            <div id="income-empty" class="p-12 text-center text-slate-400 hidden"><i class="fas fa-file-invoice-dollar text-4xl mb-3 opacity-50"></i><p>収入データがありません</p></div>
+        </div>
+    </div>
+
+    <!-- ==================== EXPENSE ==================== -->
+    <div id="tab-expense" class="tab-content">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-end mb-4 border-b pb-4 gap-4">
+            <div><h2 class="text-2xl sm:text-3xl font-bold text-slate-800">Expense Management</h2><p class="text-xs sm:text-sm text-slate-500 mt-1">外注費・経費・交通費の月別管理</p></div>
+            <div class="flex w-full sm:w-auto gap-2 flex-wrap sm:flex-nowrap">
+                <button id="btn-del-selected-exp" onclick="deleteSelectedExpenses()" disabled class="w-full sm:w-auto justify-center bg-red-50 text-red-300 px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0 transition-all cursor-not-allowed"><i class="fas fa-trash-alt mr-2"></i>選択削除(<span id="del-exp-count">0</span>)</button>
+                <button onclick="openExpenseModal()" class="w-full sm:w-auto justify-center bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-plus mr-2"></i>新規追加</button>
+            </div>
+        </div>
+        <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
+            <button onclick="setExpenseFilter('all')"       id="flt-all"           class="px-4 py-1.5 rounded-full text-xs font-bold bg-slate-800 text-white whitespace-nowrap">すべて</button>
+            <button onclick="setExpenseFilter('外注費')"    id="flt-outsourcing"   class="px-4 py-1.5 rounded-full text-xs font-bold bg-white border text-slate-600 hover:bg-slate-50 whitespace-nowrap">外注費</button>
+            <button onclick="setExpenseFilter('交通費')"    id="flt-transport"     class="px-4 py-1.5 rounded-full text-xs font-bold bg-white border text-slate-600 hover:bg-slate-50 whitespace-nowrap">交通費</button>
+            <button onclick="setExpenseFilter('会議費')"    id="flt-meeting"       class="px-4 py-1.5 rounded-full text-xs font-bold bg-white border text-slate-600 hover:bg-slate-50 whitespace-nowrap">会議費</button>
+            <button onclick="setExpenseFilter('接待交際費')" id="flt-entertainment" class="px-4 py-1.5 rounded-full text-xs font-bold bg-white border text-slate-600 hover:bg-slate-50 whitespace-nowrap">接待交際費</button>
+            <button onclick="setExpenseFilter('消耗品費')"  id="flt-supplies"      class="px-4 py-1.5 rounded-full text-xs font-bold bg-white border text-slate-600 hover:bg-slate-50 whitespace-nowrap">消耗品費</button>
+            <button onclick="setExpenseFilter('経費')"      id="flt-expense"       class="px-4 py-1.5 rounded-full text-xs font-bold bg-white border text-slate-600 hover:bg-slate-50 whitespace-nowrap">その他経費</button>
+        </div>
+        <div id="expense-list-container" class="space-y-6"></div>
+        <div id="expense-empty" class="p-12 text-center text-slate-400 hidden bg-white rounded-2xl border"><i class="fas fa-hand-holding-usd text-4xl mb-3 opacity-50"></i><p>支出データがありません</p></div>
+    </div>
+
+    <!-- ==================== SETTINGS ==================== -->
+    <div id="tab-settings" class="tab-content">
+        <div class="mb-6 border-b pb-4"><h2 class="text-2xl sm:text-3xl font-bold text-slate-800">Settings & Masters</h2><p class="text-xs sm:text-sm text-slate-500 mt-1">按分経費・取引先マスターの管理</p></div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="space-y-6">
+                <!-- 按分経費 -->
+                <div class="bg-white rounded-2xl shadow-sm border p-6">
+                    <h3 class="font-bold text-slate-800 border-b pb-3 mb-4"><i class="fas fa-percent text-amber-500 mr-2"></i>按分経費 設定</h3>
+                    <div id="apportion-list" class="space-y-3"></div>
+                    <button onclick="addApportion()" class="mt-4 text-xs bg-amber-100 text-amber-700 px-3 py-1.5 rounded hover:bg-amber-200 font-bold"><i class="fas fa-plus mr-1"></i>按分項目を追加</button>
+                </div>
+                <!-- 積立 -->
+                <div class="bg-white rounded-2xl shadow-sm border p-6">
+                    <h3 class="font-bold text-slate-800 border-b pb-3 mb-4"><i class="fas fa-piggy-bank text-emerald-500 mr-2"></i>積立・控除設定</h3>
+                    <div class="space-y-3">
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">小規模企業共済（月額）</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="set-kyosai" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" onchange="saveSettings()"></div></div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">積立NISA（月額）</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="set-nisa" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" onchange="saveSettings()"></div></div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">iDeCo（月額）</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="set-ideco" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" onchange="saveSettings()"></div></div>
+                    </div>
+                </div>
+                <!-- API Key -->
+                <div class="bg-white rounded-2xl shadow-sm border p-6">
+                    <h3 class="font-bold text-slate-800 border-b pb-3 mb-4 flex items-center justify-between">
+                        <span><i class="fas fa-key text-blue-500 mr-2"></i>AI連携用 APIキー</span>
+                        <span class="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded font-bold">AI利用時は必須</span>
+                    </h3>
+                    <p class="text-[10px] text-slate-500 mb-3">AI機能使用時はご自身のGemini APIキーを設定してください。<br>※ブラウザごとに保存されます。</p>
+                    <input type="password" id="set-api-key" class="w-full bg-slate-50 border border-slate-200 rounded p-2 font-mono text-sm transition-all duration-300 outline-none" placeholder="AIzaSy..." onchange="saveSettings()">
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <!-- 稼働管理表 -->
+                <div class="bg-white rounded-2xl shadow-sm border p-6">
+                    <div class="flex justify-between items-center border-b pb-3 mb-4">
+                        <h3 class="font-bold text-slate-800"><i class="fas fa-table text-green-500 mr-2"></i>各社 稼働管理表</h3>
+                        <button onclick="addWorkTable()" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-bold hover:bg-green-200"><i class="fas fa-plus mr-1"></i>追加</button>
+                    </div>
+                    <div id="work-tables-list" class="space-y-3"></div>
+                    <p class="text-[10px] text-slate-400 mt-3"><i class="fas fa-info-circle mr-1"></i>会社名とスプレッドシートURLを入力して保存されます</p>
+                </div>
+                <!-- 外部ツール -->
+                <div class="bg-white rounded-2xl shadow-sm border p-6">
+                    <div class="flex justify-between items-center border-b pb-3 mb-4">
+                        <h3 class="font-bold text-slate-800"><i class="fas fa-link text-indigo-500 mr-2"></i>外部ツール連携</h3>
+                        <button onclick="addTool()" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded font-bold"><i class="fas fa-plus mr-1"></i>追加</button>
+                    </div>
+                    <div id="tools-list" class="space-y-3"></div>
+                </div>
+                <!-- 取引先マスター -->
+                <div class="bg-white rounded-2xl shadow-sm border p-6">
+                    <h3 class="font-bold text-slate-800 border-b pb-3 mb-4"><i class="fas fa-building text-blue-500 mr-2"></i>取引先マスター</h3>
+                    <div class="mb-5">
+                        <label class="block text-xs font-bold text-slate-500 mb-2">収入用（クライアント）</label>
+                        <div class="flex gap-2 mb-2"><input type="text" id="new-client" class="flex-1 bg-slate-50 border rounded p-2 text-sm" placeholder="会社名"><button onclick="addMaster('clients','new-client')" class="bg-blue-600 text-white px-3 rounded text-sm font-bold">追加</button></div>
+                        <div id="client-master-list" class="flex flex-wrap gap-2"></div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-2">支出用（外注先・店舗）</label>
+                        <div class="flex gap-2 mb-2"><input type="text" id="new-payee" class="flex-1 bg-slate-50 border rounded p-2 text-sm" placeholder="外注先名"><button onclick="addMaster('payees','new-payee')" class="bg-red-600 text-white px-3 rounded text-sm font-bold">追加</button></div>
+                        <div id="payee-master-list" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+                <!-- サブスク -->
+                <div class="bg-white rounded-2xl shadow-sm border p-6">
+                    <div class="flex justify-between items-center border-b pb-3 mb-4">
+                        <h3 class="font-bold text-slate-800"><i class="fas fa-sync text-purple-500 mr-2"></i>事業用サブスク</h3>
+                        <button onclick="addSub()" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded font-bold"><i class="fas fa-plus mr-1"></i>追加</button>
+                    </div>
+                    <div id="sub-list" class="space-y-3"></div>
+                    <div class="mt-4 pt-4 border-t flex justify-between items-center bg-slate-50 p-3 rounded-lg">
+                        <span class="text-sm font-bold text-slate-600">サブスク合計</span>
+                        <span class="text-xl font-bold font-mono" id="set-sub-total">¥0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Backup -->
+        <div class="mt-8 bg-white rounded-2xl shadow-sm border p-6">
+            <h3 class="font-bold text-slate-800 border-b pb-3 mb-4"><i class="fas fa-database text-blue-500 mr-2"></i>バックアップ・復元</h3>
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button onclick="exportData()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 px-4 rounded flex items-center justify-center"><i class="fas fa-download mr-2"></i>データをバックアップ保存</button>
+                <div class="flex-1"><input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(event)"><button onclick="document.getElementById('import-file').click()" class="w-full bg-white border hover:bg-slate-50 text-slate-700 font-bold py-2 px-4 rounded flex items-center justify-center"><i class="fas fa-upload mr-2"></i>データを復元</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== TOOLS ==================== -->
+    <div id="tab-tools" class="tab-content">
+        <div class="mb-6 border-b pb-4"><h2 class="text-2xl sm:text-3xl font-bold text-slate-800">AI Tools</h2><p class="text-xs sm:text-sm text-slate-500 mt-1">領収書・交通費の自動データ化</p></div>
+
+        <!-- PDF Import -->
+        <div class="mb-8 bg-gradient-to-r from-blue-600 to-indigo-700 p-5 sm:p-6 rounded-2xl shadow-lg text-white">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h3 class="font-bold text-lg"><i class="fas fa-file-pdf mr-2 text-red-300"></i>PDF取引帳 一括インポート</h3>
+                    <p class="text-sm text-blue-100 mt-1">「取引帳.pdf」の2026年分データを自動入力します。</p>
+                </div>
+                <button onclick="importPdfData2026()" class="bg-white text-blue-700 px-5 py-2.5 rounded-full font-bold shadow-md hover:bg-blue-50 transition flex items-center shrink-0">
+                    <i class="fas fa-file-import mr-2"></i>PDFから取り込む
+                </button>
+            </div>
+        </div>
+
+        <div class="space-y-8">
+            <!-- ===== 経費レシートAI解析 ===== -->
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <div class="bg-gradient-to-r from-indigo-900 to-purple-900 p-5 sm:p-6 text-white flex justify-between">
+                    <div><h3 class="font-bold text-lg"><i class="fas fa-receipt text-purple-300 mr-2"></i>経費レシート AI解析</h3><p class="text-xs text-indigo-200 mt-1">複数枚対応</p></div>
+                    <i class="fas fa-camera text-4xl opacity-20"></i>
+                </div>
+                <div class="p-5 sm:p-6 space-y-5">
+                    <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
+                        <p class="font-bold text-slate-600">画像をアップロード</p>
+                        <a href="https://drive.google.com/drive/u/1/folders/1M3ELaaJCu-bLCUEKL0sooNl-Umfhp1wf" target="_blank" class="text-xs text-blue-500 hover:underline font-bold bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 flex items-center">
+                            <i class="fas fa-folder-open mr-1"></i>経費データフォルダ
+                        </a>
+                    </div>
+                    <div id="drop-zone" class="border-2 border-dashed border-slate-300 rounded-xl p-6 sm:p-8 text-center cursor-pointer hover:bg-slate-50 transition-colors">
+                        <input type="file" id="file-input" multiple accept="image/*,.heic,.heif" class="hidden">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-slate-400 mb-3"></i>
+                        <p class="font-bold text-slate-600 text-sm">ドロップ / クリック / <kbd class="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded border border-indigo-200 text-xs">Ctrl+V</kbd></p>
+                        <p class="text-xs text-slate-400 mt-1">JPG PNG HEIC 複数枚OK</p>
+                        <div id="file-list" class="mt-4 flex flex-wrap gap-2 justify-center"></div>
+                    </div>
+                    <div class="flex justify-center">
+                        <button id="btn-analyze" onclick="analyzeReceipts()" disabled class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-full shadow-md flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-magic mr-2"></i>レシートをAI解析</button>
+                    </div>
+                    <div id="ai-result-container" class="hidden space-y-4 pt-4 border-t">
+                        <div class="flex flex-wrap justify-between items-end gap-3">
+                            <h4 class="font-bold text-slate-800">解析結果 (CSV)</h4>
+                            <div class="flex gap-2 flex-wrap">
+                                <button onclick="copyCsv('ai-output')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-copy mr-1"></i>コピー</button>
+                                <button onclick="downloadCsv('ai-output','receipts')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-download mr-1"></i>CSV保存</button>
+                                <button onclick="registerReceiptsToExpense()" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded shadow-sm hover:bg-indigo-700 font-bold"><i class="fas fa-bolt mr-1 text-yellow-300"></i>支出表に一括登録</button>
+                            </div>
+                        </div>
+                        <textarea id="ai-output" rows="6" class="w-full bg-slate-50 border rounded-lg p-4 font-mono text-xs"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== デリバリーレシートAI解析 (NEW) ===== -->
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <div class="bg-gradient-to-r from-orange-700 to-red-800 p-5 sm:p-6 text-white flex justify-between">
+                    <div>
+                        <h3 class="font-bold text-lg"><i class="fas fa-motorcycle text-orange-300 mr-2"></i>デリバリーレシート AI解析</h3>
+                        <p class="text-xs text-orange-100 mt-1">出前館・Uber Eats等 ｜ カテゴリ: 会議費固定 ｜ 全品軽減税率8%</p>
+                    </div>
+                    <i class="fas fa-utensils text-4xl opacity-20"></i>
+                </div>
+                <div class="p-5 sm:p-6 space-y-5">
+                    <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <p class="font-bold text-slate-600">デリバリー領収書をアップロード</p>
+                            <span class="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-1 rounded-full border border-orange-200">会議費 固定</span>
+                            <span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full border border-green-200">軽減税率8% 固定</span>
+                        </div>
+                        <a href="https://drive.google.com/drive/u/1/folders/1VaHsutrynAeOE7LCpHNVZCBCJNDNpX-f" target="_blank" class="text-xs text-blue-500 hover:underline font-bold bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 flex items-center shrink-0">
+                            <i class="fas fa-folder-open mr-1"></i>デリバリーデータフォルダ
+                        </a>
+                    </div>
+                    <div id="drop-zone-dv" class="border-2 border-dashed border-orange-300 rounded-xl p-6 sm:p-8 text-center cursor-pointer hover:bg-orange-50 transition-colors">
+                        <input type="file" id="file-input-dv" multiple accept="image/*,.heic,.heif" class="hidden">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-orange-300 mb-3"></i>
+                        <p class="font-bold text-slate-600 text-sm">ドロップ / クリック</p>
+                        <p class="text-xs text-slate-400 mt-1">出前館・Uber Eats等の領収書スクショ 複数枚OK</p>
+                        <div id="file-list-dv" class="mt-4 flex flex-wrap gap-2 justify-center"></div>
+                    </div>
+                    <div class="flex justify-center">
+                        <button id="btn-analyze-dv" onclick="analyzeDelivery()" disabled class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-8 rounded-full shadow-md flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-magic mr-2"></i>デリバリーレシートを解析</button>
+                    </div>
+                    <div id="dv-result-container" class="hidden space-y-4 pt-4 border-t">
+                        <div class="flex flex-wrap justify-between items-end gap-3">
+                            <h4 class="font-bold text-slate-800">解析結果 (CSV)</h4>
+                            <div class="flex gap-2 flex-wrap">
+                                <button onclick="copyCsv('dv-output')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-copy mr-1"></i>コピー</button>
+                                <button onclick="downloadCsv('dv-output','delivery')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-download mr-1"></i>CSV保存</button>
+                                <button onclick="registerDeliveryToExpense()" class="text-xs bg-orange-600 text-white px-3 py-1.5 rounded shadow-sm hover:bg-orange-700 font-bold"><i class="fas fa-bolt mr-1 text-yellow-300"></i>支出表に一括登録</button>
+                            </div>
+                        </div>
+                        <textarea id="dv-output" rows="6" class="w-full bg-slate-50 border rounded-lg p-4 font-mono text-xs"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 消耗品費レシートAI解析 ===== -->
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <div class="bg-gradient-to-r from-purple-800 to-violet-900 p-5 sm:p-6 text-white flex justify-between">
+                    <div>
+                        <h3 class="font-bold text-lg"><i class="fas fa-box text-purple-300 mr-2"></i>消耗品費レシート AI解析</h3>
+                        <p class="text-xs text-purple-100 mt-1">Amazon・家電量販店等 ｜ カテゴリ: 消耗品費固定 ｜ 消費税10%</p>
+                    </div>
+                    <i class="fas fa-shopping-cart text-4xl opacity-20"></i>
+                </div>
+                <div class="p-5 sm:p-6 space-y-5">
+                    <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <p class="font-bold text-slate-600">領収書・注文確認をアップロード</p>
+                            <span class="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded-full border border-purple-200">消耗品費 固定</span>
+                            <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded-full border border-slate-200">消費税10%</span>
+                        </div>
+                    </div>
+                    <!-- 対応フォーマット案内 -->
+                    <div class="bg-purple-50 border border-purple-100 rounded-xl p-3 flex gap-3 items-start">
+                        <i class="fas fa-info-circle text-purple-400 mt-0.5 shrink-0"></i>
+                        <p class="text-xs text-purple-700 leading-relaxed">Amazon領収書PDF・スクショ、家電量販店・文具店等の領収書に対応。注文日・商品名・税込金額を自動読み取りします。</p>
+                    </div>
+                    <div id="drop-zone-sc" class="border-2 border-dashed border-purple-300 rounded-xl p-6 sm:p-8 text-center cursor-pointer hover:bg-purple-50 transition-colors">
+                        <input type="file" id="file-input-sc" multiple accept="image/*,.heic,.heif,.pdf" class="hidden">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-purple-300 mb-3"></i>
+                        <p class="font-bold text-slate-600 text-sm">ドロップ / クリック</p>
+                        <p class="text-xs text-slate-400 mt-1">Amazon領収書PDF・スクショ 複数枚OK</p>
+                        <div id="file-list-sc" class="mt-4 flex flex-wrap gap-2 justify-center"></div>
+                    </div>
+                    <div class="flex justify-center">
+                        <button id="btn-analyze-sc" onclick="analyzeSupplies()" disabled class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-full shadow-md flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-magic mr-2"></i>消耗品費レシートを解析</button>
+                    </div>
+                    <div id="sc-result-container" class="hidden space-y-4 pt-4 border-t">
+                        <div class="flex flex-wrap justify-between items-end gap-3">
+                            <h4 class="font-bold text-slate-800">解析結果 (CSV)</h4>
+                            <div class="flex gap-2 flex-wrap">
+                                <button onclick="copyCsv('sc-output')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-copy mr-1"></i>コピー</button>
+                                <button onclick="downloadCsv('sc-output','supplies')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-download mr-1"></i>CSV保存</button>
+                                <button onclick="registerSuppliesToExpense()" class="text-xs bg-purple-600 text-white px-3 py-1.5 rounded shadow-sm hover:bg-purple-700 font-bold"><i class="fas fa-bolt mr-1 text-yellow-300"></i>支出表に一括登録</button>
+                            </div>
+                        </div>
+                        <textarea id="sc-output" rows="6" class="w-full bg-slate-50 border rounded-lg p-4 font-mono text-xs"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 交通費AI抽出 ===== -->
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <div class="bg-gradient-to-r from-emerald-800 to-teal-900 p-5 sm:p-6 text-white flex justify-between">
+                    <div><h3 class="font-bold text-lg"><i class="fas fa-subway text-teal-300 mr-2"></i>交通費 AI抽出</h3><p class="text-xs text-emerald-100 mt-1">Suica等の履歴 ｜ 交通費のみを自動抽出（物販除外）</p></div>
+                    <i class="fas fa-train text-4xl opacity-20"></i>
+                </div>
+                <div class="p-5 sm:p-6 space-y-5">
+                    <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
+                        <p class="font-bold text-slate-600">データを入力</p>
+                        <a href="https://drive.google.com/drive/u/1/folders/1zWfG5SwRAO26WEXAuZbAX8HXXZRLeHpn" target="_blank" class="text-xs text-blue-500 hover:underline font-bold bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 flex items-center">
+                            <i class="fas fa-folder-open mr-1"></i>交通費データフォルダ
+                        </a>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-xs font-bold text-slate-500 mb-2">① 画像（スクショ等）</label>
+                            <div id="drop-zone-tr" class="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center cursor-pointer hover:bg-slate-50 h-[120px] flex flex-col justify-center">
+                                <input type="file" id="file-input-tr" multiple accept="image/*,.heic,.heif" class="hidden">
+                                <i class="fas fa-image text-2xl text-slate-400 mb-2"></i><p class="text-xs font-bold text-slate-600">スクショ等</p>
+                                <div id="file-list-tr" class="mt-2 flex flex-wrap gap-1 justify-center"></div>
+                            </div>
+                        </div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-2">② テキスト貼り付け</label>
+                            <textarea id="tr-text-input" class="w-full border rounded-lg p-2 text-xs h-[120px] resize-none focus:outline-none focus:ring-1 focus:ring-teal-500" placeholder="コピーした履歴を貼り付け..."></textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-center">
+                        <button id="btn-analyze-tr" onclick="analyzeTransport()" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-8 rounded-full shadow-md flex items-center"><i class="fas fa-magic mr-2"></i>交通費を抽出</button>
+                    </div>
+                    <div id="tr-result-container" class="hidden space-y-4 pt-4 border-t">
+                        <div class="flex flex-wrap justify-between items-end gap-3">
+                            <h4 class="font-bold text-slate-800">抽出結果 (CSV)</h4>
+                            <div class="flex gap-2">
+                                <button onclick="copyCsv('tr-output')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-copy mr-1"></i>コピー</button>
+                                <button onclick="registerTransportToExpense()" class="text-xs bg-teal-600 text-white px-3 py-1.5 rounded shadow-sm hover:bg-teal-700 font-bold"><i class="fas fa-bolt mr-1 text-yellow-300"></i>支出表に一括登録</button>
+                            </div>
+                        </div>
+                        <textarea id="tr-output" rows="6" class="w-full bg-slate-50 border rounded-lg p-4 font-mono text-xs"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History -->
+            <div class="bg-white rounded-2xl shadow-sm border p-6">
+                <h3 class="font-bold text-slate-800 border-b pb-3 mb-4"><i class="fas fa-history text-slate-400 mr-2"></i>解析履歴</h3>
+                <div id="receipt-history-list" class="space-y-3"></div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /main content wrapper -->
+</main>
+
+<datalist id="client-list"></datalist>
+<datalist id="payee-list"></datalist>
+
+<!-- ===== INCOME MODAL ===== -->
+<div id="income-modal" class="modal-bg">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg flex flex-col max-h-[90vh] m-2 sm:m-0">
+        <div class="bg-slate-800 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center shrink-0 rounded-t-2xl">
+            <h3 class="font-bold text-white"><i class="fas fa-file-invoice-dollar mr-2"></i>収入データ</h3>
+            <button onclick="closeIncomeModal()" class="text-slate-400 hover:text-white p-2 -mr-2"><i class="fas fa-times text-xl"></i></button>
+        </div>
+        <div class="p-4 sm:p-6 space-y-4 text-sm overflow-y-auto">
+            <input type="hidden" id="inc-id">
+            <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                <div><label class="block font-bold text-slate-700 mb-1 text-xs sm:text-sm">請求日(発生日)</label><input type="date" id="inc-req-date" class="w-full border rounded p-2" onchange="calcNextMonthEnd()"></div>
+                <div><label class="block font-bold text-slate-700 mb-1 text-xs sm:text-sm">入金日(予定)</label><input type="date" id="inc-pay-date" class="w-full border rounded p-2 bg-emerald-50"></div>
+            </div>
+            <div><label class="block font-bold text-slate-700 mb-1">クライアント</label><input type="text" id="inc-client" list="client-list" class="w-full border rounded p-2"></div>
+            <div><label class="block font-bold text-slate-700 mb-1">案件内容</label><input type="text" id="inc-title" class="w-full border rounded p-2" placeholder="〇月分稼働費"></div>
+            <div><label class="block font-bold text-slate-700 mb-1">請求書リンク</label><input type="url" id="inc-link" class="w-full border rounded p-2 text-xs font-mono" placeholder="Google DriveなどのURL"></div>
+            <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100 space-y-3">
+                <div><label class="block font-bold text-slate-700 mb-1">税抜金額</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="inc-amount" class="w-full border rounded p-2 pl-8 font-mono" oninput="calcIncome()"></div></div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-xs font-bold text-slate-500 mb-1">消費税(10%)</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="inc-tax" class="w-full bg-white border rounded p-2 pl-8 font-mono text-slate-500" readonly></div></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-1">税込金額</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="inc-total" class="w-full bg-white border rounded p-2 pl-8 font-mono font-bold" readonly></div></div>
+                </div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-1">源泉徴収(10.21%自動)</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="inc-withholding" class="w-full border rounded p-2 pl-8 font-mono text-red-600" oninput="calcIncome(false)"></div></div>
+                <div class="pt-2 border-t border-emerald-200"><label class="block text-xs font-bold text-emerald-800 mb-1">実入金額</label><div class="relative"><span class="absolute left-3 top-2 text-emerald-600">¥</span><input type="number" id="inc-net" class="w-full bg-white border-2 border-emerald-300 rounded p-2 pl-8 font-mono font-bold text-emerald-700 text-lg" readonly></div></div>
+            </div>
+            <div><label class="block font-bold text-slate-700 mb-1">ステータス</label>
+                <select id="inc-status" class="w-full border rounded p-2 font-bold">
+                    <option value="未請求">未請求</option><option value="請求済">請求済（入金待ち）</option><option value="入金済">入金済</option>
+                </select>
+            </div>
+        </div>
+        <div class="bg-slate-50 px-4 py-3 sm:px-6 sm:py-4 flex justify-end gap-3 border-t shrink-0 rounded-b-2xl">
+            <button onclick="closeIncomeModal()" class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded">キャンセル</button>
+            <button onclick="saveIncome()" class="px-4 py-2 text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700 rounded shadow"><i class="fas fa-save mr-1"></i>保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== EXPENSE MODAL ===== -->
+<div id="expense-modal" class="modal-bg">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg flex flex-col max-h-[90vh] m-2 sm:m-0">
+        <div class="bg-slate-800 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center shrink-0 rounded-t-2xl">
+            <h3 class="font-bold text-white"><i class="fas fa-hand-holding-usd mr-2"></i>支出データ</h3>
+            <button onclick="closeExpenseModal()" class="text-slate-400 hover:text-white p-2 -mr-2"><i class="fas fa-times text-xl"></i></button>
+        </div>
+        <div class="p-4 sm:p-6 space-y-4 text-sm overflow-y-auto">
+            <input type="hidden" id="exp-id">
+            <div><label class="block font-bold text-slate-700 mb-1">カテゴリ</label>
+                <select id="exp-category" class="w-full border rounded p-2 font-bold bg-slate-50" onchange="expCategoryChanged()">
+                    <option value="外注費">外注費（源泉徴収あり）</option>
+                    <option value="交通費">交通費（Suica等）</option>
+                    <option value="会議費">会議費</option>
+                    <option value="接待交際費">接待交際費</option>
+                    <option value="消耗品費">消耗品費</option>
+                    <option value="経費">その他経費</option>
+                </select>
+            </div>
+            <div><label class="block font-bold text-slate-700 mb-1">支払年月日</label><input type="date" id="exp-pay-date" class="w-full border rounded p-2"></div>
+            <div><label class="block font-bold text-slate-700 mb-1">支払先・店名</label><input type="text" id="exp-payee" list="payee-list" class="w-full border rounded p-2"></div>
+            <div><label class="block font-bold text-slate-700 mb-1">細目・摘要</label><input type="text" id="exp-title" class="w-full border rounded p-2" placeholder="デザイン費 / 打ち合わせ等"></div>
+            <div class="bg-red-50 p-4 rounded-xl border border-red-100 space-y-3">
+                <div><label class="block font-bold text-slate-700 mb-1" id="exp-amount-label">支払金額（税抜）</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="exp-amount" class="w-full border rounded p-2 pl-8 font-mono" oninput="calcExpense()"></div></div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-xs font-bold text-slate-500 mb-1">消費税(10%)</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="exp-tax" class="w-full bg-white border rounded p-2 pl-8 font-mono text-slate-500" readonly></div></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-1">税込金額</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="exp-total" class="w-full bg-white border rounded p-2 pl-8 font-mono font-bold" readonly></div></div>
+                </div>
+                <div id="exp-withholding-block"><label class="block text-xs font-bold text-slate-500 mb-1">源泉徴収(10.21%自動)</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="exp-withholding" class="w-full border rounded p-2 pl-8 font-mono text-blue-600" oninput="calcExpense(false)"></div></div>
+                <div class="pt-2 border-t border-red-200"><label class="block text-xs font-bold text-red-800 mb-1">実支払額</label><div class="relative"><span class="absolute left-3 top-2 text-red-600">¥</span><input type="number" id="exp-net" class="w-full bg-white border-2 border-red-300 rounded p-2 pl-8 font-mono font-bold text-red-700 text-lg" readonly></div></div>
+            </div>
+        </div>
+        <div class="bg-slate-50 px-4 py-3 sm:px-6 sm:py-4 flex justify-end gap-3 border-t shrink-0 rounded-b-2xl">
+            <button onclick="closeExpenseModal()" class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded">キャンセル</button>
+            <button onclick="saveExpense()" class="px-4 py-2 text-sm font-bold bg-red-600 text-white hover:bg-red-700 rounded shadow"><i class="fas fa-save mr-1"></i>保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Modal -->
+<div id="confirm-modal" class="modal-bg z-[100]">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm m-4 flex flex-col overflow-hidden">
+        <div class="bg-red-50 px-5 py-4 border-b border-red-100 flex items-center gap-3">
+            <i class="fas fa-exclamation-triangle text-red-500 text-xl"></i>
+            <h3 class="font-bold text-red-800" id="confirm-title">確認</h3>
+        </div>
+        <div class="p-6"><p class="text-slate-700 text-sm font-bold" id="confirm-msg"></p></div>
+        <div class="bg-slate-50 px-5 py-4 flex justify-end gap-3 border-t">
+            <button onclick="closeConfirm(false)" class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">キャンセル</button>
+            <button onclick="closeConfirm(true)" class="px-4 py-2 text-sm font-bold bg-red-600 text-white hover:bg-red-700 rounded-lg shadow-sm transition-colors">実行する</button>
+        </div>
+    </div>
+</div>
+
+<!-- Alert Modal -->
+<div id="alert-modal" class="modal-bg z-[110]">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm m-4 flex flex-col overflow-hidden">
+        <div class="p-8 text-center">
+            <div class="mb-4" id="alert-icon"></div>
+            <p class="text-slate-700 text-sm font-bold whitespace-pre-wrap leading-relaxed" id="alert-msg"></p>
+        </div>
+        <div class="bg-slate-50 px-5 py-4 flex justify-center border-t">
+            <button onclick="closeAlert()" id="alert-btn" class="w-full px-4 py-2 text-sm font-bold text-white rounded-lg shadow-sm transition-colors">OK</button>
+        </div>
+    </div>
+</div>
+
+<script>
+'use strict';
+const STORAGE_KEY='cr_erp_v5';
+const API_KEY='';
+const DEF={settings:{apportion:[{id:'rent',name:'家賃',ratio:10,defaultAmount:129000},{id:'util',name:'水光熱費',ratio:20,defaultAmount:10000},{id:'phone',name:'通信費・スマホ代',ratio:50,defaultAmount:8000}],kyosai:70000,nisa:50000,ideco:0,subs:[],externalTools:[{name:'Google Drive',url:'https://drive.google.com/'}],workTables:[{name:'株式会社アイ・ファクトリー',url:'https://docs.google.com/spreadsheets/d/1GOf5BfvJQXjpmZXhzeDb_eLJsppWs8vqyW6rMDxjDkk/edit?pli=1&gid=325275437#gid=325275437'},{name:'株式会社A1Growth',url:'https://docs.google.com/spreadsheets/d/1ToDjuYoWjBuGSb-xkHVYKB3yd5K21GpZHAM2alnKxAQ/edit?gid=1604662573#gid=1604662573'}],memo:'',geminiApiKey:'',withholding:true},monthlyCosts:{},clients:['株式会社A1Growth','株式会社BLAM','株式会社アイ・ファクトリー'],payees:['アイレントホーム株式会社','Octopus Energy','モバイルSuica'],incomes:[],expenses:[],receiptHistory:[],dashMode:'auto',lastUpdated:null};
+let S=JSON.parse(JSON.stringify(DEF));
+let expFilter='all',rcFiles=[],trFiles=[],dvFiles=[],scFiles=[];
+let monthlyChart=null,cumulativeChart=null;
+
+function save(){
+    S.lastUpdated=new Date().toISOString();
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(S));}catch(e){console.error(e);return;}
+    const ic=document.getElementById('sync-icon'),tx=document.getElementById('sync-text');
+    ic.className='fas fa-check-circle text-emerald-500';tx.textContent='保存しました';
+    updateLastUpdatedLabel();
+    clearTimeout(save._t);
+    save._t=setTimeout(()=>{ic.className='fas fa-hdd text-emerald-500';tx.textContent='ローカル保存モード';},2000);
+}
+function load(){try{const r=localStorage.getItem(STORAGE_KEY);if(r)S=migrate(JSON.parse(r));}catch(e){console.error(e);}}
+function updateLastUpdatedLabel(){
+    const lbl=document.getElementById('last-updated-label');
+    if(S.lastUpdated){const d=new Date(S.lastUpdated);lbl.textContent=`最終更新: ${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;}
+    else lbl.textContent='最終更新: --';
+}
+function migrate(d){
+    const b=JSON.parse(JSON.stringify(DEF));
+    const s={...b,...d};
+    s.settings={...b.settings,...(d.settings||{})};
+    if(!Array.isArray(s.settings.apportion)||!s.settings.apportion.length)s.settings.apportion=b.settings.apportion;
+    if(!Array.isArray(s.settings.subs))s.settings.subs=[];
+    if(!Array.isArray(s.settings.externalTools)){s.settings.externalTools=b.settings.externalTools;}
+    if(!Array.isArray(s.settings.workTables))s.settings.workTables=b.settings.workTables;
+    if(s.settings.geminiApiKey===undefined)s.settings.geminiApiKey='';
+    if(s.settings.withholding===undefined)s.settings.withholding=true;
+    if(!s.monthlyCosts)s.monthlyCosts={};
+    if(!Array.isArray(s.clients))s.clients=b.clients;
+    if(!Array.isArray(s.payees))s.payees=b.payees;
+    if(!Array.isArray(s.incomes))s.incomes=[];
+    if(!Array.isArray(s.expenses))s.expenses=[];
+    if(!Array.isArray(s.receiptHistory))s.receiptHistory=[];
+    s.expenses.forEach(e=>{if(!e.category)e.category='外注費';});
+    return s;
+}
+window.addEventListener('DOMContentLoaded',()=>{
+    load();
+    const n=new Date();
+    document.getElementById('dash-month').value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
+    renderAll();
+    initDD();
+    initPaste();
+});
+function renderAll(){
+    document.getElementById('quick-memo').value=S.settings.memo||'';
+    document.getElementById('dash-withholding').checked=S.settings.withholding!==false;
+    updateLastUpdatedLabel();
+    renderSettings();
+    renderMasterLists();
+    renderIncome();
+    renderExpense();
+    renderReceiptHistory();
+    dashMonthChanged();
+    setDashMode(S.dashMode,false);
+}
+function saveMemo(){S.settings.memo=document.getElementById('quick-memo').value;save();}
+function onWithholdingChange(){S.settings.withholding=document.getElementById('dash-withholding').checked;save();runSimulation();}
+function gotoApiSettings(){switchTab('settings');setTimeout(()=>{const el=document.getElementById('set-api-key');if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.focus();el.classList.add('bg-yellow-50','border-yellow-400','ring-4','ring-yellow-200');setTimeout(()=>{el.classList.remove('bg-yellow-50','border-yellow-400','ring-4','ring-yellow-200');el.classList.add('bg-slate-50','border-slate-200');},2000);}},100);}
+function switchTab(id){
+    document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));
+    document.getElementById('tab-'+id).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
+    document.getElementById('nav-'+id).classList.add('active');
+    if(window.innerWidth<768)toggleSidebar();
+    if(id==='dashboard')runSimulation();
+}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('-translate-x-full');document.getElementById('mobile-overlay').classList.toggle('hidden');}
+function fmt(n){return new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(n||0);}
+function changeDashMonth(d){const el=document.getElementById('dash-month');if(!el.value)return;const[y,m]=el.value.split('-');const nd=new Date(+y,+m-1+d,1);el.value=`${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}`;dashMonthChanged();}
+function dashMonthChanged(){
+    const month=document.getElementById('dash-month').value;
+    if(!month)return;
+    const[y,m]=month.split('-');
+    document.getElementById('dash-month-label').textContent=`${y}年${+m}月`;
+    if(!S.monthlyCosts[month])S.monthlyCosts[month]={};
+    const cont=document.getElementById('dash-monthly-costs');
+    cont.innerHTML='';
+    S.settings.apportion.forEach(app=>{
+        let val=S.monthlyCosts[month][app.id];
+        if(val===undefined)val=app.defaultAmount;
+        const calc=Math.floor(val*(app.ratio/100));
+        const div=document.createElement('div');
+        div.className='flex items-center gap-3 bg-white p-3 rounded-lg border border-indigo-100 shadow-sm';
+        div.innerHTML=`<div class="w-1/3 min-w-0"><p class="text-xs font-bold text-slate-600 truncate">${app.name}</p><p class="text-[10px] text-slate-400">経費率:${app.ratio}%</p></div><div class="w-1/3 relative"><span class="absolute left-2 top-2 text-slate-400 text-xs">¥</span><input type="number" value="${val}" class="w-full border rounded p-1.5 pl-6 font-mono text-sm" oninput="saveMonthlyCost('${app.id}',this.value)"></div><div class="w-1/3 text-right"><p class="text-[10px] text-slate-500">経費合算</p><p class="font-bold font-mono text-indigo-700 text-sm" id="dc-${app.id}">¥${calc.toLocaleString()}</p></div>`;
+        cont.appendChild(div);
+    });
+    runSimulation();
+}
+function saveMonthlyCost(id,val){
+    const month=document.getElementById('dash-month').value;
+    S.monthlyCosts[month][id]=Number(val)||0;
+    const app=S.settings.apportion.find(a=>a.id===id);
+    const el=document.getElementById(`dc-${id}`);
+    if(app&&el)el.textContent=`¥${Math.floor((Number(val)||0)*(app.ratio/100)).toLocaleString()}`;
+    save();runSimulation();
+}
+function setDashMode(mode,sv=true){
+    S.dashMode=mode;if(sv)save();
+    const bA=document.getElementById('btn-mode-auto'),bM=document.getElementById('btn-mode-manual'),rV=document.getElementById('dash-revenue'),rE=document.getElementById('dash-expense'),ind=document.getElementById('dash-mode-indicator'),hR=document.getElementById('dash-rev-help'),hE=document.getElementById('dash-exp-help');
+    const on='px-2 py-1.5 text-xs font-bold rounded-md bg-white text-blue-700 shadow-sm',off='px-2 py-1.5 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700';
+    if(mode==='auto'){
+        bA.className=on;bM.className=off;
+        rV.readOnly=rV.disabled=rE.readOnly=rE.disabled=true;
+        ind.textContent='自動連動中';ind.className='text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded';
+        hR.style.display=hE.style.display='block';
+    }else{
+        bM.className=on;bA.className=off;
+        rV.readOnly=rV.disabled=rE.readOnly=rE.disabled=false;
+        ind.textContent='手動入力';ind.className='text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-1 rounded';
+        hR.style.display=hE.style.display='none';
+    }
+    runSimulation();
+}
+
+function updatePieCharts(monthData,accumData){
+    const labels=['手取り','経費','税・社保'];
+    const colors=['#3b82f6','#f59e0b','#ef4444'];
+    const opts={responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{font:{size:9},padding:6,boxWidth:10}},tooltip:{callbacks:{label:(ctx)=>' '+fmt(ctx.parsed)}}}};
+    if(monthlyChart)monthlyChart.destroy();
+    const c1=document.getElementById('chart-monthly');
+    if(c1){monthlyChart=new Chart(c1,{type:'doughnut',data:{labels,datasets:[{data:monthData,backgroundColor:colors,borderWidth:0}]},options:opts});}
+    if(cumulativeChart)cumulativeChart.destroy();
+    const c2=document.getElementById('chart-cumulative');
+    if(c2){cumulativeChart=new Chart(c2,{type:'doughnut',data:{labels,datasets:[{data:accumData,backgroundColor:colors,borderWidth:0}]},options:opts});}
+}
+
+function runSimulation(){
+    const mode=S.dashMode,month=document.getElementById('dash-month').value;
+    let rev=0,exp=0,revAccum=0,expAccum=0,revY=0,expY=0,targetMonthNum=1;
+    if(month)targetMonthNum=parseInt(month.split('-')[1],10);
+    if(mode==='auto'){
+        if(month){
+            const[yStr,mStr]=month.split('-');const year=parseInt(yStr,10);
+            rev=S.incomes.filter(i=>{const d=i.reqDate||i.payDate||'';return d.startsWith(month);}).reduce((s,i)=>s+Number(i.net||i.total||0),0);
+            let appT=0;S.settings.apportion.forEach(a=>{let v=S.monthlyCosts[month]?.[a.id];if(v===undefined)v=a.defaultAmount;appT+=Math.floor(Number(v)*(a.ratio/100));});
+            const subT=S.settings.subs.reduce((s,c)=>s+Number(c.amount||0),0);
+            const varE=S.expenses.filter(e=>e.payDate&&e.payDate.startsWith(month)).reduce((s,e)=>s+Number(e.net||e.total||0),0);
+            exp=appT+subT+varE;
+            let appTAccum=0,varEAccum=0;
+            for(let mm=1;mm<=targetMonthNum;mm++){
+                const mKey=`${year}-${String(mm).padStart(2,'0')}`;
+                revAccum+=S.incomes.filter(i=>{const d=i.reqDate||i.payDate||'';return d.startsWith(mKey);}).reduce((s,i)=>s+Number(i.net||i.total||0),0);
+                varEAccum+=S.expenses.filter(e=>e.payDate&&e.payDate.startsWith(mKey)).reduce((s,e)=>s+Number(e.net||e.total||0),0);
+                S.settings.apportion.forEach(a=>{let v=S.monthlyCosts[mKey]?.[a.id];if(v===undefined)v=a.defaultAmount;appTAccum+=Math.floor(Number(v)*(a.ratio/100));});
+            }
+            expAccum=appTAccum+varEAccum+subT*targetMonthNum;
+            revY=Math.floor((revAccum/targetMonthNum)*12);expY=Math.floor((expAccum/targetMonthNum)*12);
+        }
+    }else{
+        rev=Number(document.getElementById('dash-revenue').value)||0;exp=Number(document.getElementById('dash-expense').value)||0;
+        revAccum=rev*targetMonthNum;expAccum=exp*targetMonthNum;revY=rev*12;expY=exp*12;
+    }
+    document.getElementById('dash-revenue').value=rev;document.getElementById('dash-expense').value=exp;
+    const accM=document.getElementById('fc-accum-months');if(accM)accM.textContent=targetMonthNum;
+    const accR=document.getElementById('fc-accum-revenue');if(accR)accR.textContent=fmt(revAccum);
+    const accE=document.getElementById('fc-accum-expense');if(accE)accE.textContent=fmt(expAccum);
+    const lbl=document.getElementById('fc-logic-label');
+    if(lbl)lbl.textContent=mode==='auto'?`1〜${targetMonthNum}月までの平均×12で算出`:'入力値×12で算出';
+    const cl=document.getElementById('chart-accum-label');if(cl)cl.textContent=targetMonthNum;
+    const wh=document.getElementById('dash-withholding').checked;
+    const ky=(S.settings.kyosai||0)*12,id2=(S.settings.ideco||0)*12;
+    const biz=Math.max(0,revY-expY);
+    const hlth=Math.min(1060000,Math.max(0,(biz-430000)*0.1+150000));
+    const taxable=Math.max(0,biz-650000-480000-16980*12-hlth-ky-id2);
+    let it=0;
+    if(taxable<=1950000)it=taxable*.05;
+    else if(taxable<=3300000)it=taxable*.1-97500;
+    else if(taxable<=6950000)it=taxable*.2-427500;
+    else if(taxable<=9000000)it=taxable*.23-636000;
+    else if(taxable<=18000000)it=taxable*.33-1536000;
+    else it=taxable*.4-2796000;
+    it=Math.max(0,it)*1.021;
+    let whM=0,whY=0;
+    if(wh){whM=rev<=1000000?rev*.1021:1000000*.1021+(rev-1000000)*.2042;whY=revY<=1000000?revY*.1021:1000000*.1021+(revY-1000000)*.2042;}
+    const res=Math.max(0,taxable*.1)+5000,ent=Math.max(0,(biz-2900000)*.05),cons=revY*.1*.2;
+    let rate=.05;
+    if(taxable>18000000)rate=.4;else if(taxable>9000000)rate=.33;else if(taxable>6950000)rate=.23;else if(taxable>3300000)rate=.2;else if(taxable>1950000)rate=.1;
+    const fd=1-.1-(rate*1.021);
+    const fur=fd>0?Math.max(0,(taxable*.1*.2)/fd+2000):0;
+    const remIt=Math.max(0,it-whY),totTax=remIt+res+hlth+16980*12+ent+cons,pool=totTax/12;
+    document.getElementById('kpi-tax-pool').textContent=fmt(pool);
+    document.getElementById('kpi-furusato').textContent=fmt(fur);
+    document.getElementById('kpi-withheld-label').textContent=wh?'考慮済':'未考慮';
+    const fcRevEl=document.getElementById('fc-revenue');if(fcRevEl)fcRevEl.textContent=fmt(revY);
+    document.getElementById('fc-income-tax').textContent=fmt(remIt);
+    document.getElementById('fc-resident-tax').textContent=fmt(res);
+    document.getElementById('fc-enterprise-tax').textContent=fmt(ent);
+    document.getElementById('fc-consumption-tax').textContent=fmt(cons);
+    document.getElementById('fc-total-tax').textContent=fmt(totTax);
+    // Bar chart with amounts
+    const pT=Math.min(revY>0?(totTax/revY)*100:0,100),pE=Math.min(revY>0?(expY/revY)*100:0,100),pI=Math.max(0,100-pT-pE);
+    document.getElementById('bar-tax').style.width=`${pT}%`;document.getElementById('bar-expense').style.width=`${pE}%`;document.getElementById('bar-income').style.width=`${pI}%`;
+    const takehome=Math.max(0,revY-expY-totTax);
+    const bia=document.getElementById('bar-income-amt');if(bia)bia.textContent=fmt(takehome);
+    const bea=document.getElementById('bar-expense-amt');if(bea)bea.textContent=fmt(expY);
+    const bta=document.getElementById('bar-tax-amt');if(bta)bta.textContent=fmt(totTax);
+    // Cash flow
+    const net=wh?rev-whM:rev,inv=(S.settings.kyosai||0)+(S.settings.nisa||0)+(S.settings.ideco||0),free=net-pool-exp-inv;
+    document.getElementById('flow-income').textContent=fmt(net);
+    document.getElementById('flow-tax').textContent=`▲ ${fmt(pool)}`;
+    document.getElementById('flow-fixed').textContent=`▲ ${fmt(exp)}`;
+    document.getElementById('flow-invest').textContent=`▲ ${fmt(inv)}`;
+    const fEl=document.getElementById('flow-free');
+    fEl.textContent=fmt(free);
+    fEl.className=`kpi-number-lg font-extrabold font-mono ${free<0?'text-red-300':'text-white'}`;
+    // Pie charts
+    const mNetRev=wh?rev-whM:rev;
+    const mPool=pool;
+    const mTakehome=Math.max(0,mNetRev-exp-mPool);
+    const mTax=Math.max(0,mPool);
+    const mExp=Math.max(0,exp);
+    // Cumulative charts
+    const accumRevNet=wh?revAccum-whY*(targetMonthNum/12):revAccum;
+    const accumTax=Math.max(0,totTax*(targetMonthNum/12));
+    const accumTakehome=Math.max(0,accumRevNet-expAccum-accumTax);
+    updatePieCharts(
+        [Math.max(0,mTakehome),Math.max(0,mExp),Math.max(0,mTax)],
+        [Math.max(0,accumTakehome),Math.max(0,expAccum),Math.max(0,accumTax)]
+    );
+}
+
+// ===== SETTINGS =====
+function renderSettings(){
+    document.getElementById('set-kyosai').value=S.settings.kyosai||0;
+    document.getElementById('set-nisa').value=S.settings.nisa||0;
+    document.getElementById('set-ideco').value=S.settings.ideco||0;
+    document.getElementById('set-api-key').value=S.settings.geminiApiKey||'';
+    const al=document.getElementById('apportion-list');al.innerHTML='';
+    S.settings.apportion.forEach((a,i)=>{
+        const div=document.createElement('div');div.className='bg-slate-50 p-3 rounded-lg border flex flex-wrap gap-2 items-end';
+        div.innerHTML=`<div class="flex-1 min-w-[100px]"><label class="block text-xs font-bold text-slate-500 mb-1">項目名</label><input type="text" value="${a.name}" class="w-full border rounded p-1.5 text-sm font-bold" onchange="updateApportion(${i},'name',this.value)"></div><div class="flex-1 min-w-[80px]"><label class="block text-xs font-bold text-slate-500 mb-1">目安額 ¥</label><input type="number" value="${a.defaultAmount}" class="w-full border rounded p-1.5 font-mono text-sm" onchange="updateApportion(${i},'defaultAmount',this.value)"></div><div class="w-16"><label class="block text-xs font-bold text-slate-500 mb-1">割合 %</label><input type="number" value="${a.ratio}" class="w-full border rounded p-1.5 font-mono text-sm" onchange="updateApportion(${i},'ratio',this.value)"></div><button onclick="deleteApportion(${i})" class="text-red-400 hover:text-red-600 p-2"><i class="fas fa-trash"></i></button>`;
+        al.appendChild(div);
+    });
+    renderTools();renderSubs();renderWorkTables();
+}
+function addApportion(){S.settings.apportion.push({id:'a'+Date.now(),name:'新規項目',ratio:10,defaultAmount:5000});save();renderSettings();dashMonthChanged();}
+function updateApportion(i,k,v){S.settings.apportion[i][k]=(k==='ratio'||k==='defaultAmount')?Number(v):v;save();dashMonthChanged();}
+function deleteApportion(i){S.settings.apportion.splice(i,1);save();renderSettings();dashMonthChanged();}
+function saveSettings(){S.settings.kyosai=Number(document.getElementById('set-kyosai').value)||0;S.settings.nisa=Number(document.getElementById('set-nisa').value)||0;S.settings.ideco=Number(document.getElementById('set-ideco').value)||0;S.settings.geminiApiKey=document.getElementById('set-api-key').value.trim();save();runSimulation();renderSettings();}
+function renderTools(){const c=document.getElementById('tools-list');c.innerHTML='';S.settings.externalTools.forEach((tool,i)=>{const div=document.createElement('div');div.className='flex flex-col gap-2 bg-slate-50 border p-3 rounded-lg';div.innerHTML=`<div class="flex justify-between items-center gap-2"><input type="text" value="${tool.name}" onchange="updateTool(${i},'name',this.value)" class="flex-1 bg-white border rounded p-1.5 text-sm font-bold" placeholder="ツール名"><button onclick="deleteTool(${i})" class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash text-sm"></i></button></div><div class="flex items-center gap-2"><i class="fas fa-link text-slate-400"></i><input type="text" value="${tool.url}" onchange="updateTool(${i},'url',this.value)" class="flex-1 bg-white border rounded p-1.5 text-xs font-mono" placeholder="https://..."><a href="${tool.url}" target="_blank" class="text-blue-500 hover:text-blue-700 p-1"><i class="fas fa-external-link-alt"></i></a></div>`;c.appendChild(div);});}
+function addTool(){S.settings.externalTools.push({name:'新規ツール',url:''});save();renderTools();}
+function updateTool(i,k,v){S.settings.externalTools[i][k]=v;save();renderTools();}
+function deleteTool(i){S.settings.externalTools.splice(i,1);save();renderTools();}
+
+// ===== WORK TABLES =====
+const WT_COLORS=['blue','emerald','violet','amber','rose','sky','teal','orange'];
+function renderWorkTables(){
+    const c=document.getElementById('work-tables-list');
+    if(!c)return;
+    c.innerHTML='';
+    if(!S.settings.workTables.length){
+        c.innerHTML='<p class="text-xs text-slate-400 text-center py-3">稼働管理表がありません。「追加」から登録してください。</p>';
+        return;
+    }
+    S.settings.workTables.forEach((wt,i)=>{
+        const color=WT_COLORS[i%WT_COLORS.length];
+        const div=document.createElement('div');
+        div.className=`bg-${color}-50 border border-${color}-200 rounded-xl p-3 space-y-2`;
+        div.innerHTML=`
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-${color}-600 text-white rounded-lg flex items-center justify-center shrink-0 text-xs font-bold">${i+1}</div>
+                <input type="text" value="${wt.name}" placeholder="会社名" onchange="updateWorkTable(${i},'name',this.value)"
+                    class="flex-1 bg-white border border-${color}-200 rounded-lg px-3 py-1.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-${color}-300">
+                <button onclick="deleteWorkTable(${i})" class="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors">
+                    <i class="fas fa-trash text-sm"></i>
+                </button>
+            </div>
+            <div class="flex items-center gap-2 pl-10">
+                <input type="url" value="${wt.url}" placeholder="スプレッドシートのURL" onchange="updateWorkTable(${i},'url',this.value)"
+                    class="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-600 focus:outline-none focus:ring-2 focus:ring-${color}-300 min-w-0">
+                ${wt.url ? `<a href="${wt.url}" target="_blank" class="shrink-0 bg-${color}-600 hover:bg-${color}-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors">
+                    <i class="fas fa-external-link-alt"></i><span class="hidden sm:inline">開く</span>
+                </a>` : `<span class="shrink-0 bg-slate-200 text-slate-400 text-xs font-bold px-3 py-1.5 rounded-lg">開く</span>`}
+            </div>`;
+        c.appendChild(div);
+    });
+}
+function addWorkTable(){S.settings.workTables.push({name:'',url:''});save();renderWorkTables();}
+function updateWorkTable(i,k,v){S.settings.workTables[i][k]=v;save();renderWorkTables();}
+function deleteWorkTable(i){customConfirm('この稼働管理表を削除しますか？',()=>{S.settings.workTables.splice(i,1);save();renderWorkTables();});}
+function renderSubs(){const c=document.getElementById('sub-list');c.innerHTML='';let tot=0;S.settings.subs.forEach((sub,i)=>{tot+=Number(sub.amount||0);const div=document.createElement('div');div.className='flex justify-between items-center bg-slate-50 border p-2 rounded';div.innerHTML=`<input type="text" value="${sub.name}" onchange="updateSub(${i},'name',this.value)" class="w-1/2 bg-transparent text-sm font-bold border-b border-dashed focus:outline-none" placeholder="サービス名"><div class="flex items-center gap-2"><span class="text-xs text-slate-400">¥</span><input type="number" value="${sub.amount}" onchange="updateSub(${i},'amount',this.value)" class="w-20 bg-transparent text-sm font-mono text-right border-b border-dashed focus:outline-none"><button onclick="deleteSub(${i})" class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash text-xs"></i></button></div>`;c.appendChild(div);});document.getElementById('set-sub-total').textContent=fmt(tot);}
+function addSub(){S.settings.subs.push({name:'',amount:0});save();renderSubs();}
+function updateSub(i,k,v){S.settings.subs[i][k]=k==='amount'?Number(v):v;save();renderSubs();runSimulation();}
+function deleteSub(i){S.settings.subs.splice(i,1);save();renderSubs();runSimulation();}
+function renderMasterLists(){const cL=document.getElementById('client-master-list'),pL=document.getElementById('payee-master-list'),dC=document.getElementById('client-list'),dP=document.getElementById('payee-list');cL.innerHTML='';pL.innerHTML='';dC.innerHTML='';dP.innerHTML='';S.clients.forEach((c,i)=>{cL.innerHTML+=`<span class="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded border border-blue-100 flex items-center gap-1">${c}<button onclick="deleteMaster('clients',${i})" class="text-blue-400 hover:text-red-500"><i class="fas fa-times"></i></button></span>`;dC.innerHTML+=`<option value="${c}">`;});S.payees.forEach((p,i)=>{pL.innerHTML+=`<span class="bg-red-50 text-red-700 text-xs px-2 py-1 rounded border border-red-100 flex items-center gap-1">${p}<button onclick="deleteMaster('payees',${i})" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button></span>`;dP.innerHTML+=`<option value="${p}">`;});}
+function addMaster(type,id){const v=document.getElementById(id).value.trim();if(v&&!S[type].includes(v)){S[type].push(v);document.getElementById(id).value='';save();renderMasterLists();}}
+function deleteMaster(type,i){S[type].splice(i,1);save();renderMasterLists();}
+function exportData(){const a=document.createElement('a');a.href='data:text/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(S));a.download='cr_erp_backup_'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();}
+function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{S=migrate(JSON.parse(ev.target.result));save();renderAll();customAlert('復元しました！','success');}catch{customAlert('読込エラー','error');}e.target.value='';};r.readAsText(f);}
+
+// ===== MODALS =====
+let confirmCallback=null;
+function customConfirm(msg,callback){document.getElementById('confirm-msg').textContent=msg;document.getElementById('confirm-modal').classList.add('open');confirmCallback=callback;}
+function closeConfirm(result){document.getElementById('confirm-modal').classList.remove('open');if(confirmCallback&&result)confirmCallback();confirmCallback=null;}
+function customAlert(msg,type='info'){document.getElementById('alert-msg').textContent=msg;const icon=document.getElementById('alert-icon');const btn=document.getElementById('alert-btn');if(type==='error'){icon.innerHTML='<i class="fas fa-times-circle text-5xl text-red-500"></i>';btn.className='w-full px-4 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors';}else if(type==='success'){icon.innerHTML='<i class="fas fa-check-circle text-5xl text-emerald-500"></i>';btn.className='w-full px-4 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-colors';}else{icon.innerHTML='<i class="fas fa-info-circle text-5xl text-blue-500"></i>';btn.className='w-full px-4 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors';}document.getElementById('alert-modal').classList.add('open');}
+function closeAlert(){document.getElementById('alert-modal').classList.remove('open');}
+
+// ===== PNG/PDF =====
+async function downloadPage(type){const activeTab=document.querySelector('.tab-content.active');if(!activeTab)return;activeTab.style.background='#f8fafc';activeTab.style.padding='20px';try{const canvas=await html2canvas(activeTab,{scale:2,useCORS:true,backgroundColor:'#f8fafc'});activeTab.style.background='';activeTab.style.padding='';if(type==='png'){const link=document.createElement('a');link.download=`CR_ERP_Export_${new Date().toISOString().slice(0,10)}.png`;link.href=canvas.toDataURL('image/png');link.click();}else if(type==='pdf'){const{jsPDF}=window.jspdf;const imgData=canvas.toDataURL('image/png');const pdf=new jsPDF({orientation:'p',unit:'mm',format:'a4'});const pdfWidth=pdf.internal.pageSize.getWidth();const pdfHeight=(canvas.height*pdfWidth)/canvas.width;pdf.addImage(imgData,'PNG',0,0,pdfWidth,pdfHeight);pdf.save(`CR_ERP_Export_${new Date().toISOString().slice(0,10)}.pdf`);}}catch(e){console.error(e);customAlert('出力に失敗しました。','error');}}
+
+// ===== INCOME =====
+function renderIncome(){const tb=document.getElementById('income-body'),em=document.getElementById('income-empty');tb.innerHTML='';if(!S.incomes.length){em.classList.remove('hidden');return;}em.classList.add('hidden');[...S.incomes].sort((a,b)=>(b.payDate||'').localeCompare(a.payDate||'')).forEach(p=>{const badge=p.status==='入金済'?`<button onclick="toggleIncomeStatus('${p.id}')" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2 py-1 rounded text-xs font-bold border border-emerald-200 transition-colors shadow-sm"><i class="fas fa-check mr-1"></i>入金済</button>`:p.status==='請求済'?`<button onclick="toggleIncomeStatus('${p.id}')" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded text-xs font-bold border border-blue-200 transition-colors shadow-sm">請求済</button>`:`<button onclick="toggleIncomeStatus('${p.id}')" class="bg-amber-100 hover:bg-amber-200 text-amber-700 px-2 py-1 rounded text-xs font-bold border border-amber-200 transition-colors shadow-sm">未請求</button>`;const linkHtml=p.link?`<a href="${p.link}" target="_blank" class="text-blue-500 hover:text-blue-700 ml-1 inline-flex items-center" title="請求書を開く"><i class="fas fa-external-link-alt text-[10px]"></i></a>`:'';const tr=document.createElement('tr');tr.className='hover:bg-slate-50';tr.innerHTML=`<td class="p-3 whitespace-nowrap"><p class="font-bold text-xs">${p.payDate||'-'}</p><p class="text-[10px] text-slate-500">請:${p.reqDate||'-'}</p></td><td class="p-3"><p class="font-bold text-xs">${p.client||''}</p><p class="text-xs text-slate-500 flex items-center">${p.title||''}${linkHtml}</p></td><td class="p-3 font-mono text-right text-slate-600 text-xs">${fmt(p.amount)}</td><td class="p-3 font-mono text-right text-slate-500 text-xs">${fmt(p.tax)}</td><td class="p-3 font-mono text-right font-bold text-xs">${fmt(p.total)}</td><td class="p-3 font-mono text-right text-red-500 text-xs">▲${fmt(p.withholding)}</td><td class="p-3 font-mono text-right font-bold text-emerald-700 bg-emerald-50/50 text-xs">${fmt(p.net)}</td><td class="p-3 text-center">${badge}</td><td class="p-3 text-center whitespace-nowrap"><button onclick="dupIncome('${p.id}')" class="text-emerald-500 hover:text-emerald-700 mx-1" title="複製"><i class="fas fa-copy"></i></button><button onclick="openIncomeModal('${p.id}')" class="text-slate-400 hover:text-slate-700 mx-1"><i class="fas fa-edit"></i></button><button onclick="delIncome('${p.id}')" class="text-red-300 hover:text-red-600 mx-1"><i class="fas fa-trash"></i></button></td>`;tb.appendChild(tr);});}
+function toggleIncomeStatus(id){const p=S.incomes.find(x=>String(x.id)===String(id));if(!p)return;if(p.status==='未請求')p.status='請求済';else if(p.status==='請求済')p.status='入金済';else p.status='未請求';save();renderIncome();}
+function calcNextMonthEnd(){const req=document.getElementById('inc-req-date').value;if(!req)return;const d=new Date(req);const e=new Date(d.getFullYear(),d.getMonth()+2,0);document.getElementById('inc-pay-date').value=`${e.getFullYear()}-${String(e.getMonth()+1).padStart(2,'0')}-${String(e.getDate()).padStart(2,'0')}`;}
+function calcIncome(auto=true){const a=Number(document.getElementById('inc-amount').value)||0,t=Math.floor(a*.1),tot=a+t;document.getElementById('inc-tax').value=t;document.getElementById('inc-total').value=tot;let w=Number(document.getElementById('inc-withholding').value)||0;if(auto){w=Math.floor(a*.1021);document.getElementById('inc-withholding').value=w;}document.getElementById('inc-net').value=tot-w;}
+function openIncomeModal(id=null){document.getElementById('income-modal').classList.add('open');['inc-id','inc-req-date','inc-pay-date','inc-client','inc-title','inc-link','inc-amount','inc-tax','inc-total','inc-withholding','inc-net'].forEach(k=>{document.getElementById(k).value='';});document.getElementById('inc-status').value='未請求';if(id){const p=S.incomes.find(x=>String(x.id)===String(id));if(!p)return;document.getElementById('inc-id').value=p.id;document.getElementById('inc-req-date').value=p.reqDate||'';document.getElementById('inc-pay-date').value=p.payDate||'';document.getElementById('inc-client').value=p.client||'';document.getElementById('inc-title').value=p.title||'';document.getElementById('inc-link').value=p.link||'';document.getElementById('inc-amount').value=p.amount||0;document.getElementById('inc-tax').value=p.tax||0;document.getElementById('inc-total').value=p.total||0;document.getElementById('inc-withholding').value=p.withholding||0;document.getElementById('inc-net').value=p.net||0;document.getElementById('inc-status').value=p.status||'未請求';}else{document.getElementById('inc-req-date').value=new Date().toISOString().split('T')[0];calcNextMonthEnd();}}
+function closeIncomeModal(){document.getElementById('income-modal').classList.remove('open');}
+function saveIncome(){const id=document.getElementById('inc-id').value;const p={id:id||Date.now().toString(),reqDate:document.getElementById('inc-req-date').value,payDate:document.getElementById('inc-pay-date').value,client:document.getElementById('inc-client').value,title:document.getElementById('inc-title').value,link:document.getElementById('inc-link').value,amount:Number(document.getElementById('inc-amount').value)||0,tax:Number(document.getElementById('inc-tax').value)||0,total:Number(document.getElementById('inc-total').value)||0,withholding:Number(document.getElementById('inc-withholding').value)||0,net:Number(document.getElementById('inc-net').value)||0,status:document.getElementById('inc-status').value};if(!p.amount){customAlert('金額は必須です','error');return;}if(id){const i=S.incomes.findIndex(x=>String(x.id)===String(id));if(i>=0)S.incomes[i]=p;else S.incomes.push(p);}else S.incomes.push(p);if(p.client&&!S.clients.includes(p.client)){S.clients.push(p.client);renderMasterLists();}save();closeIncomeModal();renderIncome();runSimulation();}
+function delIncome(id){customConfirm('このデータを削除しますか？',()=>{S.incomes=S.incomes.filter(x=>String(x.id)!==String(id));save();renderIncome();runSimulation();});}
+function dupIncome(id){const p=S.incomes.find(x=>String(x.id)===String(id));if(!p)return;openIncomeModal(id);document.getElementById('inc-id').value='';document.getElementById('inc-title').value+=' (コピー)';document.getElementById('inc-status').value='未請求';}
+
+// ===== EXPENSE =====
+function setExpenseFilter(f){expFilter=f;['all','outsourcing','expense','transport','meeting','entertainment','supplies'].forEach(k=>{const btn=document.getElementById('flt-'+k);if(!btn)return;const on=(f==='all'&&k==='all')||(f==='外注費'&&k==='outsourcing')||(f==='経費'&&k==='expense')||(f==='交通費'&&k==='transport')||(f==='会議費'&&k==='meeting')||(f==='接待交際費'&&k==='entertainment')||(f==='消耗品費'&&k==='supplies');btn.className='px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap '+(on?'bg-slate-800 text-white shadow-sm':'bg-white border border-slate-300 text-slate-600 hover:bg-slate-50');});renderExpense();}
+function renderExpense(){
+    const btnDel=document.getElementById('btn-del-selected-exp');
+    if(btnDel){btnDel.disabled=true;btnDel.className='w-full sm:w-auto justify-center bg-red-50 text-red-300 px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0 transition-all cursor-not-allowed';document.getElementById('del-exp-count').textContent='0';}
+    const cont=document.getElementById('expense-list-container'),em=document.getElementById('expense-empty');cont.innerHTML='';
+    const data=expFilter==='all'?S.expenses:S.expenses.filter(e=>e.category===expFilter);
+    if(!data.length){em.classList.remove('hidden');return;}em.classList.add('hidden');
+    const grouped={};data.forEach(e=>{const m=e.payDate?e.payDate.slice(0,7):'未定';if(!grouped[m])grouped[m]={items:[],total:0};grouped[m].items.push(e);grouped[m].total+=Number(e.net||0);});
+    Object.keys(grouped).sort((a,b)=>b.localeCompare(a)).forEach(month=>{
+        const gd=grouped[month];gd.items.sort((a,b)=>(a.payDate||'').localeCompare(b.payDate||''));
+        const parts=month.split('-');const label=month==='未定'?'日付未定':`${parts[0]}年 ${+parts[1]}月`;
+        const sec=document.createElement('div');sec.className='bg-white rounded-2xl shadow-sm border overflow-hidden';
+        let html=`<div class="bg-slate-100 px-4 py-3 border-b flex justify-between items-center"><h3 class="font-bold text-slate-700 text-sm"><i class="far fa-calendar-alt text-blue-500 mr-2"></i>${label}</h3><span class="text-xs font-bold text-slate-500">小計: <span class="text-base font-mono text-slate-800 ml-1">¥${gd.total.toLocaleString()}</span></span></div><div class="overflow-x-auto"><table class="w-full text-sm" id="exp-table-${month}" style="min-width:550px"><thead><tr class="bg-white border-b text-slate-400 text-xs"><th class="p-2 w-10 text-center"><input type="checkbox" onchange="toggleAllExpenses(this,'${month}')" class="rounded border-slate-300 cursor-pointer"></th><th class="p-2 font-normal">日付</th><th class="p-2 font-normal text-center">カテゴリ</th><th class="p-2 font-normal">支払先/摘要</th><th class="p-2 font-normal text-right">税込</th><th class="p-2 font-normal text-right text-red-700">実支払</th><th class="p-2 font-normal text-center">操作</th></tr></thead><tbody class="divide-y">`;
+        gd.items.forEach(p=>{
+            const badge=p.category==='交通費'?`<span class="bg-teal-100 text-teal-800 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap"><i class="fas fa-train mr-1"></i>交通費</span>`:p.category==='会議費'?`<span class="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap"><i class="fas fa-coffee mr-1"></i>会議費</span>`:p.category==='接待交際費'?`<span class="bg-pink-100 text-pink-800 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap"><i class="fas fa-glass-cheers mr-1"></i>接待</span>`:p.category==='消耗品費'?`<span class="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap"><i class="fas fa-pen mr-1"></i>消耗品</span>`:p.category==='経費'?`<span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap"><i class="fas fa-receipt mr-1"></i>その他</span>`:`<span class="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap"><i class="fas fa-user-tie mr-1"></i>${p.category||'外注費'}</span>`;
+            html+=`<tr class="hover:bg-slate-50"><td class="p-2 text-center"><input type="checkbox" class="exp-checkbox rounded border-slate-300 cursor-pointer" value="${p.id}" onchange="updateExpDeleteBtn()"></td><td class="p-2 font-bold text-xs whitespace-nowrap">${p.payDate||'-'}</td><td class="p-2 text-center">${badge}</td><td class="p-2"><p class="font-bold text-xs">${p.payee||''}</p><p class="text-xs text-slate-500">${p.title||''}</p></td><td class="p-2 font-mono text-right font-bold text-xs">${fmt(p.total)}</td><td class="p-2 font-mono text-right font-bold text-red-700 bg-red-50/50 text-xs">${fmt(p.net)}</td><td class="p-2 text-center whitespace-nowrap"><button onclick="dupExpense('${p.id}')" class="bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white rounded p-1.5 mx-0.5 transition-colors" title="複製"><i class="fas fa-copy text-xs"></i></button><button onclick="openExpenseModal('${p.id}')" class="bg-slate-100 text-slate-500 hover:bg-slate-600 hover:text-white rounded p-1.5 mx-0.5 transition-colors" title="編集"><i class="fas fa-edit text-xs"></i></button><button onclick="delExpense('${p.id}')" class="bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded p-1.5 mx-0.5 transition-colors" title="削除"><i class="fas fa-trash text-xs"></i></button></td></tr>`;
+        });
+        html+=`</tbody></table></div>`;sec.innerHTML=html;cont.appendChild(sec);
+    });
+}
+function toggleAllExpenses(cb,month){const tb=document.getElementById(`exp-table-${month}`);if(tb)tb.querySelectorAll('.exp-checkbox').forEach(c=>c.checked=cb.checked);updateExpDeleteBtn();}
+function updateExpDeleteBtn(){const ch=document.querySelectorAll('.exp-checkbox:checked');const btn=document.getElementById('btn-del-selected-exp');if(!btn)return;document.getElementById('del-exp-count').textContent=ch.length;if(ch.length>0){btn.disabled=false;btn.className='w-full sm:w-auto justify-center bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0 transition-all cursor-pointer';}else{btn.disabled=true;btn.className='w-full sm:w-auto justify-center bg-red-50 text-red-300 px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0 transition-all cursor-not-allowed';}}
+function deleteSelectedExpenses(){const ch=document.querySelectorAll('.exp-checkbox:checked');if(!ch.length)return;customConfirm(`選択した ${ch.length} 件の支出を一括削除しますか？`,()=>{const ids=Array.from(ch).map(c=>String(c.value));S.expenses=S.expenses.filter(x=>!ids.includes(String(x.id)));save();renderExpense();runSimulation();});}
+function expCategoryChanged(){const cat=document.getElementById('exp-category').value,blk=document.getElementById('exp-withholding-block'),wi=document.getElementById('exp-withholding');if(cat==='外注費'){blk.style.display='block';}else{blk.style.display='none';wi.value=0;}calcExpense(false);}
+function calcExpense(auto=true){const cat=document.getElementById('exp-category').value,a=Number(document.getElementById('exp-amount').value)||0,t=Math.floor(a*.1),tot=a+t;document.getElementById('exp-tax').value=t;document.getElementById('exp-total').value=tot;let w=0;if(cat==='外注費'&&auto){w=Math.floor(a*.1021);document.getElementById('exp-withholding').value=w;}else if(cat!=='外注費'){w=0;document.getElementById('exp-withholding').value=0;}else{w=Number(document.getElementById('exp-withholding').value)||0;}document.getElementById('exp-net').value=tot-w;}
+function openExpenseModal(id=null){document.getElementById('expense-modal').classList.add('open');['exp-id','exp-pay-date','exp-payee','exp-title','exp-amount','exp-tax','exp-total','exp-withholding','exp-net'].forEach(k=>{document.getElementById(k).value='';});document.getElementById('exp-category').value='会議費';if(id){const p=S.expenses.find(x=>String(x.id)===String(id));if(!p)return;document.getElementById('exp-id').value=p.id;document.getElementById('exp-category').value=p.category||'会議費';document.getElementById('exp-pay-date').value=p.payDate||'';document.getElementById('exp-payee').value=p.payee||'';document.getElementById('exp-title').value=p.title||'';document.getElementById('exp-amount').value=p.amount||0;document.getElementById('exp-tax').value=p.tax||0;document.getElementById('exp-total').value=p.total||0;document.getElementById('exp-withholding').value=p.withholding||0;document.getElementById('exp-net').value=p.net||0;}else{document.getElementById('exp-pay-date').value=new Date().toISOString().split('T')[0];}expCategoryChanged();}
+function closeExpenseModal(){document.getElementById('expense-modal').classList.remove('open');}
+function saveExpense(){const id=document.getElementById('exp-id').value;const p={id:id||Date.now().toString(),category:document.getElementById('exp-category').value,payDate:document.getElementById('exp-pay-date').value,payee:document.getElementById('exp-payee').value,title:document.getElementById('exp-title').value,amount:Number(document.getElementById('exp-amount').value)||0,tax:Number(document.getElementById('exp-tax').value)||0,total:Number(document.getElementById('exp-total').value)||0,withholding:Number(document.getElementById('exp-withholding').value)||0,net:Number(document.getElementById('exp-net').value)||0};if(!p.amount&&p.amount!==0){customAlert('金額を入力してください','error');return;}if(id){const i=S.expenses.findIndex(x=>String(x.id)===String(id));if(i>=0)S.expenses[i]=p;else S.expenses.push(p);}else S.expenses.push(p);if(p.payee&&!S.payees.includes(p.payee)){S.payees.push(p.payee);renderMasterLists();}save();closeExpenseModal();renderExpense();runSimulation();}
+function delExpense(id){customConfirm('このデータを削除しますか？',()=>{S.expenses=S.expenses.filter(x=>String(x.id)!==String(id));save();renderExpense();runSimulation();});}
+function dupExpense(id){const p=S.expenses.find(x=>String(x.id)===String(id));if(!p)return;openExpenseModal(id);document.getElementById('exp-id').value='';document.getElementById('exp-title').value+=' (コピー)';}
+
+// ===== AI TOOLS =====
+function importPdfData2026(){customConfirm('添付のPDF「取引帳」から2026年分の経費データを取り込みますか？',()=>{const pdfData=[{d:'2026-01-12',c:'会議費',p:'コメダ珈琲店 アトレ亀戸店',t:'株式会社S Sパートナー様と新規案件に関する相談',a:2980,r:10},{d:'2026-01-21',c:'接待交際費',p:'士別バーベキュー 札幌店',t:'Algrowth様との新規案件の相談',a:7480,r:10},{d:'2026-01-21',c:'接待交際費',p:'回転寿し トリトン厚別店',t:'Algrowth様との新規案件の相談',a:5313,r:10},{d:'2026-01-26',c:'経費',p:'Octopus Energy',t:'電気料金 2025/12/15-01/14(事業利用分20%)',a:2160,r:10},{d:'2026-01-27',c:'経費',p:'OpenAI, LLC',t:'ChatGPT Plus 1月分利用料(業務100%)',a:3500,r:10},{d:'2026-01-31',c:'接待交際費',p:'江戸前回転寿司もりいち亀戸駅前',t:'アーバンコネクト様への打ち合わせ',a:3330,r:10},{d:'2026-02-04',c:'会議費',p:'ランビックスイーツデリ',t:'ラクスル様との打ち合わせ',a:1130,r:8},{d:'2026-02-07',c:'接待交際費',p:'根室花まる 錦糸町テルミナ店',t:'株式会社BLAMとの打ち合わせ',a:3350,r:10},{d:'2026-02-11',c:'接待交際費',p:'LAS青山店',t:'アイファクトリー様との新規案件相談',a:19250,r:10},{d:'2026-02-11',c:'会議費',p:'ドトール南青山5丁目店',t:'リベイス様との打ち合わせ',a:1150,r:10},{d:'2026-02-13',c:'会議費',p:'餃子の王将亀戸店',t:'リベイス様との打ち合わせ',a:3037,r:10},{d:'2026-02-15',c:'接待交際費',p:'回転寿しトリトン東京スカイツリ',t:'合同会社Liberra様と新規案件の相談',a:5874,r:10},{d:'2026-02-15',c:'接待交際費',p:'チーズガーデン東京ソラマチ店',t:'アイファクトリー様への手土産',a:1690,r:8},{d:'2026-02-16',c:'会議費',p:'日高屋 亀戸店(出前館)',t:'ラクスル様との打ち合わせ',a:1410,r:8},{d:'2026-02-21',c:'接待交際費',p:'日本橋芋屋金次郎',t:'アーバンコネクト様への手土産',a:950,r:8},{d:'2026-02-21',c:'会議費',p:'泰興楼八重洲本店',t:'株式会社S Sパートナー様と新規案件に関する相談',a:2100,r:10},{d:'2026-02-22',c:'接待交際費',p:'江戸前回転寿司もりいち亀戸駅前',t:'フラッグシップオーケストラ様と新規案件の相談',a:2320,r:10},{d:'2026-02-26',c:'接待交際費',p:'豚ウォーリー亀戸店',t:'アイファクトリー様との新規案件相談',a:7282,r:10},{d:'2026-03-01',c:'接待交際費',p:'三越銀座店',t:'アイファクトリー様への手土産',a:1512,r:10},{d:'2026-03-01',c:'会議費',p:'KOMEDAis東銀座',t:'アーバンコネクト様との打ち合わせ',a:850,r:10},{d:'2026-03-03',c:'会議費',p:'日高屋 亀戸店(出前館)',t:'ラクスル様との打ち合わせ',a:1500,r:8},{d:'2026-03-03',c:'会議費',p:'大戸屋ごはん処 亀戸駅前店',t:'ラクスル様との打ち合わせ',a:1350,r:8},{d:'2026-03-05',c:'会議費',p:'日高屋 亀戸店(出前館)',t:'リベイス様との打ち合わせ',a:1200,r:8},{d:'2026-03-06',c:'会議費',p:'あん庵 赤坂見附店',t:'アーバンコネクト様との会食',a:11686,r:10},{d:'2026-03-07',c:'接待交際費',p:'コメダ珈琲店 アトレ亀戸店',t:'アーバンコネクト様への手土産',a:910,r:10},{d:'2026-03-07',c:'会議費',p:'コメダ珈琲店 アトレ亀戸店',t:'アーバンコネクト様とのMTG',a:2080,r:10}];let addedCount=0;pdfData.forEach(item=>{const exists=S.expenses.some(e=>e.payDate===item.d&&e.total===item.a&&e.payee===item.p);if(!exists){const amount=Math.floor(item.a/(1+(item.r/100)));const tax=item.a-amount;S.expenses.push({id:'pdf-'+Date.now()+'-'+addedCount,category:item.c,payDate:item.d,payee:item.p,title:item.t,amount,tax,total:item.a,withholding:0,net:item.a});addedCount++;}});if(addedCount>0){save();renderExpense();runSimulation();customAlert(`${addedCount}件の経費データをインポートしました！`,'success');}else{customAlert('既に取り込み済みか対象データがありません。','info');}});}
+
+function initDD(){
+    // Receipt drop zone
+    const dz=document.getElementById('drop-zone'),fi=document.getElementById('file-input');
+    dz.addEventListener('click',()=>fi.click());
+    dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
+    dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+    dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');addRcFiles(e.dataTransfer.files);});
+    fi.addEventListener('change',e=>addRcFiles(e.target.files));
+    // Delivery drop zone (NEW)
+    const ddz=document.getElementById('drop-zone-dv'),dfi=document.getElementById('file-input-dv');
+    ddz.addEventListener('click',()=>dfi.click());
+    ddz.addEventListener('dragover',e=>{e.preventDefault();ddz.classList.add('drag-over');});
+    ddz.addEventListener('dragleave',()=>ddz.classList.remove('drag-over'));
+    ddz.addEventListener('drop',e=>{e.preventDefault();ddz.classList.remove('drag-over');addDvFiles(e.dataTransfer.files);});
+    dfi.addEventListener('change',e=>addDvFiles(e.target.files));
+    // Supplies drop zone
+    const sdz=document.getElementById('drop-zone-sc'),sfi=document.getElementById('file-input-sc');
+    sdz.addEventListener('click',()=>sfi.click());
+    sdz.addEventListener('dragover',e=>{e.preventDefault();sdz.classList.add('drag-over');});
+    sdz.addEventListener('dragleave',()=>sdz.classList.remove('drag-over'));
+    sdz.addEventListener('drop',e=>{e.preventDefault();sdz.classList.remove('drag-over');addScFiles(e.dataTransfer.files);});
+    sfi.addEventListener('change',e=>addScFiles(e.target.files));
+    // Transport drop zone
+    const dzt=document.getElementById('drop-zone-tr'),fit=document.getElementById('file-input-tr');
+    dzt.addEventListener('click',()=>fit.click());
+    dzt.addEventListener('dragover',e=>{e.preventDefault();dzt.classList.add('drag-over');});
+    dzt.addEventListener('dragleave',()=>dzt.classList.remove('drag-over'));
+    dzt.addEventListener('drop',e=>{e.preventDefault();dzt.classList.remove('drag-over');addTrFiles(e.dataTransfer.files);});
+    fit.addEventListener('change',e=>addTrFiles(e.target.files));
+}
+function addRcFiles(files){for(const f of files){if(f.type.startsWith('image/')||f.name.toLowerCase().match(/\.(heic|heif)$/))rcFiles.push(f);}renderFileList(rcFiles,'file-list','fas fa-receipt text-indigo-400');document.getElementById('btn-analyze').disabled=!rcFiles.length;}
+function addDvFiles(files){for(const f of files){if(f.type.startsWith('image/')||f.name.toLowerCase().match(/\.(heic|heif)$/))dvFiles.push(f);}renderFileList(dvFiles,'file-list-dv','fas fa-motorcycle text-orange-400');document.getElementById('btn-analyze-dv').disabled=!dvFiles.length;}
+function addScFiles(files){for(const f of files){if(f.type.startsWith('image/')||f.type==='application/pdf'||f.name.toLowerCase().match(/\.(heic|heif|pdf)$/))scFiles.push(f);}renderFileList(scFiles,'file-list-sc','fas fa-box text-purple-400');document.getElementById('btn-analyze-sc').disabled=!scFiles.length;}
+function addTrFiles(files){for(const f of files){if(f.type.startsWith('image/')||f.name.toLowerCase().match(/\.(heic|heif)$/))trFiles.push(f);}renderFileList(trFiles,'file-list-tr','fas fa-image text-teal-400');}
+function renderFileList(files,listId,iconClass){const el=document.getElementById(listId);el.innerHTML='';files.forEach(f=>{const d=document.createElement('div');d.className='bg-white border px-2 py-1 rounded text-[10px] font-bold text-slate-600 flex items-center shadow-sm max-w-full truncate';d.innerHTML=`<i class="${iconClass} mr-1"></i>${f.name}`;el.appendChild(d);});}
+function initPaste(){document.addEventListener('paste',e=>{if(!document.getElementById('tab-tools').classList.contains('active'))return;if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName))return;const items=e.clipboardData.items;let added=false;for(let i=0;i<items.length;i++){if(items[i].type.indexOf('image')!==-1){const f=items[i].getAsFile();const ext=f.type.split('/')[1]||'png';rcFiles.push(new File([f],`pasted_${Date.now()}.${ext}`,{type:f.type}));added=true;}}if(added){renderFileList(rcFiles,'file-list','fas fa-receipt text-indigo-400');document.getElementById('btn-analyze').disabled=!rcFiles.length;const dz=document.getElementById('drop-zone');dz.classList.add('bg-indigo-50','border-indigo-400');setTimeout(()=>dz.classList.remove('bg-indigo-50','border-indigo-400'),300);}});}
+function b64(file){return new Promise((res,rej)=>{const r=new FileReader();r.readAsDataURL(file);r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;});}
+async function fetchAI(payload,retries=3){
+    const activeKey=S.settings.geminiApiKey||API_KEY;
+    const isCustomKey=(activeKey&&activeKey!==API_KEY);
+    const modelsToTry=isCustomKey?['gemini-2.5-flash','gemini-2.0-flash','gemini-1.5-flash-latest']:['gemini-2.5-flash-preview-09-2025'];
+    let lastError=null;
+    for(const modelName of modelsToTry){
+        const url=`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${activeKey}`;
+        const delays=[1000,2000,4000];
+        for(let i=0;i<=retries;i++){
+            try{
+                const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+                if(!r.ok){let errText='';try{const errJson=await r.json();errText=errJson.error?.message||`HTTP ${r.status}`;}catch(e){errText=`HTTP ${r.status}`;}if(r.status===401||r.status===403||(r.status===400&&errText.toLowerCase().includes('api key')))throw new Error('API_KEY_ERROR');if(r.status===404||errText.toLowerCase().includes('not found')||errText.toLowerCase().includes('not supported'))throw new Error('MODEL_NOT_FOUND');throw new Error(errText);}
+                const data=await r.json();return data;
+            }catch(e){lastError=e;if(e.message==='API_KEY_ERROR')throw e;if(e.message==='MODEL_NOT_FOUND')break;if(i===retries)break;await new Promise(r=>setTimeout(r,delays[i]));}
+        }
+    }
+    if(lastError&&lastError.message!=='MODEL_NOT_FOUND')throw lastError;
+    throw new Error('お使いのAPIキーで利用可能なAIモデルが見つかりませんでした。');
+}
+function extractCsv(text){const m=text.match(new RegExp('\\x60\\x60\\x60(?:csv|text)?\\n([\\s\\S]*?)\\n\\x60\\x60\\x60'));return m?m[1].trim():text.trim();}
+
+// 経費レシート解析
+async function analyzeReceipts(){
+    if(!rcFiles.length)return;
+    const btn=document.getElementById('btn-analyze');
+    btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>解析中...';btn.disabled=true;
+    try{
+        const parts=await Promise.all(rcFiles.map(async f=>{const b=await b64(f);const mt=f.type||(f.name.toLowerCase().endsWith('heic')?'image/heic':'image/jpeg');return{inlineData:{mimeType:mt,data:b}};}));
+        const prompt=`領収書の画像を解析しCSVで出力せよ。\nヘッダー行: 取引日,科目(会議費|接待交際費|消耗品費|交通費|外注費|経費),取引手段,摘要,取引先,税込金額,消費税率,軽減税率対象\n【重要】カンマを値に含めない。`;
+        const data=await fetchAI({contents:[{role:'user',parts:[{text:prompt},...parts]}]});
+        if(!data.candidates||data.candidates.length===0)throw new Error('AIが回答を生成できませんでした。');
+        const csv=extractCsv(data.candidates[0].content.parts[0].text||'');
+        document.getElementById('ai-output').value=csv;
+        document.getElementById('ai-result-container').classList.remove('hidden');
+        const ts=new Date().toLocaleString('ja-JP');
+        S.receiptHistory.unshift({id:Date.now().toString(),type:'経費',date:ts,csv});save();renderReceiptHistory();
+        rcFiles=[];renderFileList(rcFiles,'file-list','');
+    }catch(e){
+        if(e.message==='API_KEY_ERROR')customAlert('APIキーが未設定か無効です。設定タブを確認してください。','error');
+        else customAlert(`エラー: ${e.message}`,'error');
+    }finally{btn.innerHTML='<i class="fas fa-magic mr-2"></i>レシートをAI解析';btn.disabled=false;}
+}
+
+// デリバリーレシート解析 (NEW)
+async function analyzeDelivery(){
+    if(!dvFiles.length)return;
+    const btn=document.getElementById('btn-analyze-dv');
+    btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>解析中...';btn.disabled=true;
+    try{
+        const parts=await Promise.all(dvFiles.map(async f=>{const b=await b64(f);const mt=f.type||(f.name.toLowerCase().endsWith('heic')?'image/heic':'image/jpeg');return{inlineData:{mimeType:mt,data:b}};}));
+        const prompt=`出前館・Uber Eats等のデリバリーサービス領収書を解析せよ。
+以下のルールを厳守すること:
+- カテゴリ（科目）は全て「会議費」に固定すること
+- 消費税率は全て「8%」（軽減税率対象）に固定すること
+- サービス料・配達料等の手数料も全て「会議費」「8%」として扱う
+- 合計金額(税込)を取引金額とする
+出力形式(ヘッダーあり):
+取引日,科目,取引手段,摘要,取引先,税込金額,消費税率,軽減税率対象
+カンマを値に含めない。日付はYYYY-MM-DD形式。`;
+        const data=await fetchAI({contents:[{role:'user',parts:[{text:prompt},...parts]}]});
+        if(!data.candidates||data.candidates.length===0)throw new Error('AIが回答を生成できませんでした。');
+        const csv=extractCsv(data.candidates[0].content.parts[0].text||'');
+        document.getElementById('dv-output').value=csv;
+        document.getElementById('dv-result-container').classList.remove('hidden');
+        const ts=new Date().toLocaleString('ja-JP');
+        S.receiptHistory.unshift({id:Date.now().toString(),type:'デリバリー',date:ts,csv});save();renderReceiptHistory();
+        dvFiles=[];renderFileList(dvFiles,'file-list-dv','');
+    }catch(e){
+        if(e.message==='API_KEY_ERROR')customAlert('APIキーが未設定か無効です。設定タブを確認してください。','error');
+        else customAlert(`エラー: ${e.message}`,'error');
+    }finally{btn.innerHTML='<i class="fas fa-magic mr-2"></i>デリバリーレシートを解析';btn.disabled=false;}
+}
+
+// 交通費AI抽出（交通費のみ・年補完）
+async function analyzeTransport(){
+    const text=document.getElementById('tr-text-input').value.trim();
+    if(!trFiles.length&&!text){customAlert('画像かテキストを入力してください','error');return;}
+    const btn=document.getElementById('btn-analyze-tr');
+    btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>抽出中...';btn.disabled=true;
+    try{
+        const parts=[];
+        if(text)parts.push({text:text});
+        const imgs=await Promise.all(trFiles.map(async f=>{const b=await b64(f);const mt=f.type||(f.name.toLowerCase().endsWith('heic')?'image/heic':'image/jpeg');return{inlineData:{mimeType:mt,data:b}};}));
+        parts.push(...imgs);
+        const currentYear=new Date().getFullYear();
+        const prompt=`Suica・ICカード・交通系ICの利用履歴から「交通費のみ」をCSV形式で出力せよ。
+以下を厳守すること:
+- 電車・バス・タクシー・新幹線等の交通費のみを抽出すること
+- コンビニ・飲食・物販・チャージ・その他交通費以外の取引は必ず除外すること
+- 日付に年の記載がない場合は「${currentYear}年」として補完し、YYYY-MM-DD形式で出力すること
+出力形式(ヘッダーなし):
+取引日(YYYY-MM-DD),摘要(乗車区間等),金額(数字のみ)
+カンマを値に含めない。`;
+        parts.unshift({text:prompt});
+        const data=await fetchAI({contents:[{role:'user',parts}]});
+        if(!data.candidates||data.candidates.length===0)throw new Error('AI回答生成エラー');
+        const csv=extractCsv(data.candidates[0].content.parts[0].text||'');
+        document.getElementById('tr-output').value=csv;
+        document.getElementById('tr-result-container').classList.remove('hidden');
+        const ts=new Date().toLocaleString('ja-JP');
+        S.receiptHistory.unshift({id:Date.now().toString(),type:'交通費',date:ts,csv});save();renderReceiptHistory();
+        trFiles=[];renderFileList(trFiles,'file-list-tr','');
+    }catch(e){customAlert(`抽出エラー: ${e.message}`,'error');}
+    finally{btn.innerHTML='<i class="fas fa-magic mr-2"></i>交通費を抽出';btn.disabled=false;}
+}
+
+// 一括登録
+function registerReceiptsToExpense(){const csv=document.getElementById('ai-output').value.trim();if(!csv)return;const lines=csv.split('\n');let count=0;const start=lines[0].includes('取引日')?1:0;for(let i=start;i<lines.length;i++){const cols=lines[i].split(',');if(cols.length<6)continue;const dateStr=cols[0].replace(/\//g,'-');const aiCat=(cols[1]||'').trim();let cat='経費';if(['会議費','接待交際費','消耗品費','交通費','外注費'].includes(aiCat))cat=aiCat;else if(aiCat.includes('会議'))cat='会議費';else if(aiCat.includes('交際')||aiCat.includes('接待'))cat='接待交際費';else if(aiCat.includes('消耗'))cat='消耗品費';const payee=cols[4]||'レシート店舗';let title=`${cols[3]||''}`;const total=Number(cols[5].replace(/[^0-9]/g,''))||0;const rate=cols[6]&&cols[6].includes('8')?8:10;const isKeigen=rate===8||(cols[7]&&cols[7].includes('対象'));if(isKeigen)title+=' ※軽減税率対象';const amount=Math.floor(total/(1+(rate/100)));const tax=total-amount;S.expenses.push({id:Date.now().toString()+i,category:cat,payDate:dateStr,payee,title,amount,tax,total,withholding:0,net:total});count++;}if(count>0){save();renderExpense();runSimulation();customAlert(`${count}件の経費を一括登録しました！`,'success');}}
+
+function registerDeliveryToExpense(){
+    const csv=document.getElementById('dv-output').value.trim();if(!csv)return;
+    const lines=csv.split('\n');let count=0;const start=lines[0].includes('取引日')?1:0;
+    for(let i=start;i<lines.length;i++){
+        const cols=lines[i].split(',');if(cols.length<6)continue;
+        const dateStr=cols[0].replace(/\//g,'-');
+        const payee=cols[4]||'デリバリーサービス';
+        const title=(cols[3]||'デリバリー注文')+' ※軽減税率対象';
+        const total=Number(cols[5].replace(/[^0-9]/g,''))||0;
+        const amount=Math.floor(total/1.08);const tax=total-amount;
+        S.expenses.push({id:'dv-'+Date.now()+'-'+i,category:'会議費',payDate:dateStr,payee,title,amount,tax,total,withholding:0,net:total});count++;
+    }
+    if(count>0){save();renderExpense();runSimulation();customAlert(`${count}件のデリバリー経費を会議費として登録しました！`,'success');}
+}
+
+// 消耗品費レシート解析
+async function analyzeSupplies(){
+    if(!scFiles.length)return;
+    const btn=document.getElementById('btn-analyze-sc');
+    btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>解析中...';btn.disabled=true;
+    try{
+        const parts=await Promise.all(scFiles.map(async f=>{
+            const b=await b64(f);
+            const mt=f.type||( f.name.toLowerCase().endsWith('pdf')?'application/pdf': f.name.toLowerCase().endsWith('heic')?'image/heic':'image/jpeg');
+            return{inlineData:{mimeType:mt,data:b}};
+        }));
+        const prompt=`Amazon・家電量販店・文具店等の領収書・注文確認書を解析せよ。
+以下のルールを厳守すること:
+- カテゴリ（科目）は全て「消耗品費」に固定すること
+- 消費税率は10%に固定すること（軽減税率対象外）
+- 注文日または購入日を取引日とすること（YYYY-MM-DD形式）
+- 商品名・モデル名を摘要に記載すること（長すぎる場合は先頭40文字程度に短縮）
+- 支払い金額（税込・実際に支払った金額、ギフトカード等の割引後）を税込金額とすること
+- Amazonの場合: 「ご請求額」の金額を使用すること（ギフトカード等で¥0になる場合は商品の小計を使用）
+- 取引先はショップ・販売元名またはサービス名とすること（Amazonの場合は「Amazon.co.jp」）
+出力形式(ヘッダーあり):
+取引日,科目,取引手段,摘要,取引先,税込金額,消費税率,軽減税率対象
+カンマを値に含めない。税込金額は数字のみ（¥マーク不要）。軽減税率対象は「対象外」固定。`;
+        const data=await fetchAI({contents:[{role:'user',parts:[{text:prompt},...parts]}]});
+        if(!data.candidates||data.candidates.length===0)throw new Error('AIが回答を生成できませんでした。');
+        const csv=extractCsv(data.candidates[0].content.parts[0].text||'');
+        document.getElementById('sc-output').value=csv;
+        document.getElementById('sc-result-container').classList.remove('hidden');
+        const ts=new Date().toLocaleString('ja-JP');
+        S.receiptHistory.unshift({id:Date.now().toString(),type:'消耗品費',date:ts,csv});save();renderReceiptHistory();
+        scFiles=[];renderFileList(scFiles,'file-list-sc','');
+    }catch(e){
+        if(e.message==='API_KEY_ERROR')customAlert('APIキーが未設定か無効です。設定タブを確認してください。','error');
+        else customAlert(`エラー: ${e.message}`,'error');
+    }finally{btn.innerHTML='<i class="fas fa-magic mr-2"></i>消耗品費レシートを解析';btn.disabled=false;}
+}
+function registerSuppliesToExpense(){
+    const csv=document.getElementById('sc-output').value.trim();if(!csv)return;
+    const lines=csv.split('\n');let count=0;const start=lines[0].includes('取引日')?1:0;
+    for(let i=start;i<lines.length;i++){
+        const cols=lines[i].split(',');if(cols.length<6)continue;
+        const dateStr=cols[0].replace(/\//g,'-');
+        const payee=cols[4]||'Amazon.co.jp';
+        const title=(cols[3]||'消耗品').substring(0,50);
+        const total=Number(cols[5].replace(/[^0-9]/g,''))||0;
+        if(!total)continue;
+        const amount=Math.floor(total/1.1);const tax=total-amount;
+        S.expenses.push({id:'sc-'+Date.now()+'-'+i,category:'消耗品費',payDate:dateStr,payee,title,amount,tax,total,withholding:0,net:total});count++;
+    }
+    if(count>0){save();renderExpense();runSimulation();customAlert(`${count}件の消耗品費を登録しました！`,'success');}
+}
+
+function registerTransportToExpense(){const csv=document.getElementById('tr-output').value.trim();if(!csv)return;const lines=csv.split('\n');let count=0;const start=lines[0].includes('取引日')?1:0;for(let i=start;i<lines.length;i++){const cols=lines[i].split(',');if(cols.length<3)continue;const dateStr=cols[0].replace(/\//g,'-');const title=cols[1]||'交通費';const total=Number(cols[2].replace(/[^0-9]/g,''))||0;S.expenses.push({id:Date.now().toString()+i,category:'交通費',payDate:dateStr,payee:'モバイルSuica等',title,amount:total,tax:0,total,withholding:0,net:total});count++;}if(count>0){save();renderExpense();runSimulation();customAlert(`${count}件の交通費を一括登録しました！`,'success');}}
+
+function copyCsv(id){const text=document.getElementById(id).value;if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>customAlert('コピーしました！','success')).catch(()=>{fallbackCopy(text);});}else{fallbackCopy(text);}}
+function fallbackCopy(text){const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');customAlert('コピーしました！','success');}catch(e){}document.body.removeChild(ta);}
+function downloadCsv(id,prefix){const text=document.getElementById(id).value;const bom=new Uint8Array([0xEF,0xBB,0xBF]);const blob=new Blob([bom,text],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`${prefix}_${new Date().toISOString().slice(0,10)}.csv`;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);}
+function renderReceiptHistory(){
+    const el=document.getElementById('receipt-history-list');if(!el)return;el.innerHTML='';
+    if(!S.receiptHistory.length){el.innerHTML='<p class="text-sm text-slate-400 text-center py-4">履歴はありません</p>';return;}
+    S.receiptHistory.forEach(h=>{
+        const badge=h.type==='交通費'?'<span class="bg-teal-100 text-teal-800 px-1 rounded text-[8px] mr-1">交通</span>':h.type==='デリバリー'?'<span class="bg-orange-100 text-orange-800 px-1 rounded text-[8px] mr-1">配達</span>':h.type==='消耗品費'?'<span class="bg-purple-100 text-purple-800 px-1 rounded text-[8px] mr-1">消耗品</span>':'<span class="bg-indigo-100 text-indigo-800 px-1 rounded text-[8px] mr-1">経費</span>';
+        const div=document.createElement('div');div.className='bg-slate-50 border rounded-lg p-3 text-sm flex justify-between items-start hover:bg-slate-100 transition gap-2';
+        div.innerHTML=`<div class="flex-1 min-w-0 pr-2"><p class="font-bold text-slate-700 text-xs mb-1">${badge}<i class="fas fa-clock mr-1 opacity-50"></i>${h.date}</p><p class="text-[10px] text-slate-500 font-mono bg-white px-2 py-1 rounded border truncate">${h.csv.substring(0,80).replace(/\n/g,' ')}...</p></div><div class="flex gap-1 shrink-0 mt-1"><button onclick="viewHistory('${h.id}')" class="text-[10px] bg-white border px-2 py-1.5 rounded shadow-sm hover:bg-blue-50 hover:text-blue-600 font-bold">内容を見る</button><button onclick="delHistory('${h.id}')" class="text-[10px] text-slate-400 hover:text-red-500 px-2 py-1.5"><i class="fas fa-trash"></i></button></div>`;
+        el.appendChild(div);
+    });
+}
+function viewHistory(id){
+    const h=S.receiptHistory.find(x=>x.id===id);if(!h)return;
+    let outId='ai-output',contId='ai-result-container';
+    if(h.type==='交通費'){outId='tr-output';contId='tr-result-container';}
+    else if(h.type==='デリバリー'){outId='dv-output';contId='dv-result-container';}
+    else if(h.type==='消耗品費'){outId='sc-output';contId='sc-result-container';}
+    document.getElementById(outId).value=h.csv;
+    document.getElementById(contId).classList.remove('hidden');
+    document.getElementById(contId).scrollIntoView({behavior:'smooth'});
+}
+function delHistory(id){customConfirm('この履歴を削除しますか？',()=>{S.receiptHistory=S.receiptHistory.filter(x=>x.id!==id);save();renderReceiptHistory();});}
+
+// ====== Firebase Cloud Sync ======
+(async()=>{
+    try{
+        const{initializeApp}=await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
+        const{getAuth,signInWithCustomToken,signInAnonymously,onAuthStateChanged}=await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
+        const{getFirestore,doc,setDoc,onSnapshot}=await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+        const firebaseConfig=JSON.parse(typeof __firebase_config!=='undefined'?__firebase_config:'{}');
+        const app=initializeApp(firebaseConfig);const auth=getAuth(app);const db=getFirestore(app);
+        const appId=typeof __app_id!=='undefined'?__app_id:'default-app-id';
+        let currentUser=null,isSyncing=false;
+        window.save=async function(){
+            S.lastUpdated=new Date().toISOString();
+            try{localStorage.setItem(STORAGE_KEY,JSON.stringify(S));}catch(e){}
+            updateLastUpdatedLabel();
+            const ic=document.getElementById('sync-icon'),tx=document.getElementById('sync-text');
+            if(!currentUser||isSyncing){ic.className='fas fa-check-circle text-emerald-500';tx.textContent='ローカル保存済';return;}
+            ic.className='fas fa-sync fa-spin text-blue-500';tx.textContent='同期中...';
+            try{const docRef=doc(db,'artifacts',appId,'public','data','erp_state','shared');await setDoc(docRef,{state:JSON.stringify(S)});ic.className='fas fa-cloud text-blue-500';tx.textContent='クラウド保存済';}
+            catch(e){ic.className='fas fa-exclamation-triangle text-amber-500';tx.textContent='同期エラー';}
+        };
+        const initAuth=async()=>{if(typeof __initial_auth_token!=='undefined'&&__initial_auth_token)await signInWithCustomToken(auth,__initial_auth_token);else await signInAnonymously(auth);};
+        onAuthStateChanged(auth,(user)=>{currentUser=user;if(user){const docRef=doc(db,'artifacts',appId,'public','data','erp_state','shared');onSnapshot(docRef,(docSnap)=>{if(docSnap.exists()){const data=docSnap.data();if(data.state){const newState=JSON.parse(data.state);if(newState.lastUpdated!==S.lastUpdated){isSyncing=true;S=migrate(newState);renderAll();isSyncing=false;}}}else{window.save();}});}});
+        await initAuth();
+    }catch(e){console.error("Cloud failed",e);}
+})();
+</script>
+</body>
+</html>

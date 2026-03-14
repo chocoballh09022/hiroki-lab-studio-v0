@@ -487,11 +487,13 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <p class="text-[10px] font-bold text-slate-500 text-center mb-2">対象月</p>
-                                <div style="max-width:200px;margin:0 auto"><canvas id="chart-monthly-tax"></canvas></div>
+                                <div style="max-width:180px;margin:0 auto"><canvas id="chart-monthly-tax"></canvas></div>
+                                <div id="legend-monthly-tax" class="mt-2 space-y-1"></div>
                             </div>
                             <div>
                                 <p class="text-[10px] font-bold text-slate-500 text-center mb-2">累計(1〜<span id="chart-accum-label">?</span>月)</p>
-                                <div style="max-width:200px;margin:0 auto"><canvas id="chart-cumulative-tax"></canvas></div>
+                                <div style="max-width:180px;margin:0 auto"><canvas id="chart-cumulative-tax"></canvas></div>
+                                <div id="legend-cumulative-tax" class="mt-2 space-y-1"></div>
                             </div>
                         </div>
                     </div>
@@ -504,21 +506,18 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <p class="text-[10px] font-bold text-slate-500 text-center mb-2">対象月</p>
-                                <div style="max-width:200px;margin:0 auto"><canvas id="chart-monthly-cash"></canvas></div>
+                                <div style="max-width:180px;margin:0 auto"><canvas id="chart-monthly-cash"></canvas></div>
+                                <div id="legend-monthly-cash" class="mt-2 space-y-1"></div>
                             </div>
                             <div>
                                 <p class="text-[10px] font-bold text-slate-500 text-center mb-2">累計(1〜<span id="chart-accum-label2">?</span>月)</p>
-                                <div style="max-width:200px;margin:0 auto"><canvas id="chart-cumulative-cash"></canvas></div>
+                                <div style="max-width:180px;margin:0 auto"><canvas id="chart-cumulative-cash"></canvas></div>
+                                <div id="legend-cumulative-cash" class="mt-2 space-y-1"></div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="flex flex-wrap gap-3 justify-center text-[10px]">
-                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-400 inline-block"></span>手取り</span>
-                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span>経費</span>
-                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-400 inline-block"></span>税・社保</span>
-                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-emerald-400 inline-block"></span>積立</span>
-                </div>
+                <!-- 凡例はチャート下に金額付きで表示 -->
             </div>
         </div>
     </div>
@@ -1235,6 +1234,8 @@ function dashMonthChanged(){
     if(!S.monthlyCosts[month])S.monthlyCosts[month]={};
     const cont=document.getElementById('dash-monthly-costs');
     cont.innerHTML='';
+
+    // 按分経費
     S.settings.apportion.forEach(app=>{
         let val=S.monthlyCosts[month][app.id];
         if(val===undefined)val=app.defaultAmount;
@@ -1256,7 +1257,65 @@ function dashMonthChanged(){
         </div>`;
         cont.appendChild(div);
     });
+
+    // 区切り線
+    const sep=document.createElement('div');
+    sep.className='border-t border-indigo-100 pt-2 mt-1';
+    sep.innerHTML='<p class="text-[10px] font-bold text-slate-400 mb-2"><i class="fas fa-piggy-bank mr-1"></i>社会保険・控除（月別手動入力）</p>';
+    cont.appendChild(sep);
+
+    // 小規模企業共済（月別）
+    const kyosaiDefault=S.settings.kyosai||0;
+    const kyosaiVal=S.monthlyCosts[month]['_kyosai']!==undefined?S.monthlyCosts[month]['_kyosai']:kyosaiDefault;
+    const kyosaiDiv=document.createElement('div');
+    kyosaiDiv.className='flex items-center gap-3 bg-white p-3 rounded-lg border border-emerald-100 shadow-sm';
+    kyosaiDiv.innerHTML=`<div class="w-[38%] min-w-0">
+        <p class="text-xs font-bold text-slate-700 truncate">小規模企業共済</p>
+        <p class="text-[10px] text-slate-400">デフォルト: <span class="font-bold text-emerald-600">¥${kyosaiDefault.toLocaleString()}</span></p>
+    </div>
+    <div class="w-[35%] relative">
+        <span class="absolute left-2 top-2 text-slate-400 text-xs">¥</span>
+        <input type="number" value="${kyosaiVal}" class="w-full border rounded p-1.5 pl-6 font-mono text-sm border-emerald-200" oninput="saveMonthlySpecial('_kyosai',this.value)" placeholder="${kyosaiDefault}">
+        <p class="text-[9px] text-slate-400 mt-0.5">この月の実際の掛金</p>
+    </div>
+    <div class="flex-1 text-right">
+        <p class="text-[9px] text-slate-500">全額控除</p>
+        <p class="font-bold font-mono text-emerald-700 text-sm" id="dc-_kyosai">¥${Number(kyosaiVal).toLocaleString()}</p>
+    </div>`;
+    cont.appendChild(kyosaiDiv);
+
+    // 国民健康保険（月別上書き）
+    const hlthBizEst=Math.max(0,((Math.max(0,Number(document.getElementById('dash-revenue')?.value||0)*12)-expY_estimate())-430000)*0.1+150000);
+    const hlthMonthlyEst=Math.round(Math.min(1060000,hlthBizEst)/12);
+    const hlthVal=S.monthlyCosts[month]['_hlth']!==undefined?S.monthlyCosts[month]['_hlth']:hlthMonthlyEst;
+    const hlthDiv=document.createElement('div');
+    hlthDiv.className='flex items-center gap-3 bg-white p-3 rounded-lg border border-sky-100 shadow-sm';
+    hlthDiv.innerHTML=`<div class="w-[38%] min-w-0">
+        <p class="text-xs font-bold text-slate-700 truncate">国民健康保険</p>
+        <p class="text-[10px] text-slate-400">概算: <span class="font-bold text-sky-600">¥${hlthMonthlyEst.toLocaleString()}/月</span></p>
+    </div>
+    <div class="w-[35%] relative">
+        <span class="absolute left-2 top-2 text-slate-400 text-xs">¥</span>
+        <input type="number" value="${S.monthlyCosts[month]['_hlth']!==undefined?S.monthlyCosts[month]['_hlth']:''}" class="w-full border rounded p-1.5 pl-6 font-mono text-sm border-sky-200" oninput="saveMonthlySpecial('_hlth',this.value)" placeholder="空欄=自動概算">
+        <p class="text-[9px] text-slate-400 mt-0.5">実際の保険料通知額</p>
+    </div>
+    <div class="flex-1 text-right">
+        <p class="text-[9px] text-slate-500">全額控除</p>
+        <p class="font-bold font-mono text-sky-700 text-sm" id="dc-_hlth">¥${Number(S.monthlyCosts[month]['_hlth']!==undefined?S.monthlyCosts[month]['_hlth']:hlthMonthlyEst).toLocaleString()}</p>
+    </div>`;
+    cont.appendChild(hlthDiv);
+
     runSimulation();
+}
+// 年間経費概算（健保計算用）
+function expY_estimate(){
+    const month=document.getElementById('dash-month')?.value;if(!month)return 0;
+    const[yStr,mStr]=month.split('-');const year=parseInt(yStr,10);const targetM=parseInt(mStr,10);
+    let appDeduct=0;
+    for(let mm=1;mm<=targetM;mm++){const mKey=`${year}-${String(mm).padStart(2,'0')}`;S.settings.apportion.forEach(a=>{let v=S.monthlyCosts[mKey]?.[a.id];if(v===undefined)v=a.defaultAmount;appDeduct+=Math.floor(Number(v)*(a.ratio/100));});}
+    const varE=S.expenses.filter(e=>e.payDate&&e.payDate.startsWith(String(year))).reduce((s,e)=>s+Number(e.net||e.total||0),0);
+    const subT=(S.settings.subs.reduce((s,c)=>s+Number(c.amount||0),0))*targetM;
+    return targetM>0?Math.floor((appDeduct+varE+subT)/targetM)*12:0;
 }
 function saveMonthlyCost(id,val){
     const month=document.getElementById('dash-month').value;
@@ -1264,6 +1323,20 @@ function saveMonthlyCost(id,val){
     const app=S.settings.apportion.find(a=>a.id===id);
     const el=document.getElementById(`dc-${id}`);
     if(app&&el)el.textContent=`¥${Math.floor((Number(val)||0)*(app.ratio/100)).toLocaleString()}`;
+    save();runSimulation();
+}
+function saveMonthlySpecial(key,val){
+    const month=document.getElementById('dash-month').value;
+    if(!month)return;
+    if(!S.monthlyCosts[month])S.monthlyCosts[month]={};
+    // 空欄の場合はキー削除（=概算に戻す）
+    if(val===''||val===null||val===undefined){delete S.monthlyCosts[month][key];}
+    else{S.monthlyCosts[month][key]=Number(val)||0;}
+    const el=document.getElementById(`dc-${key}`);
+    if(el){
+        const v=val!==''?Number(val)||0:0;
+        el.textContent=`¥${v.toLocaleString()}`;
+    }
     save();runSimulation();
 }
 function setDashMode(mode,sv=true){
@@ -1288,17 +1361,33 @@ let chartInstances={};
 function updatePieCharts(monthTax,accumTax,monthCash,accumCash){
     const labels=['手取り','経費','税・社保','積立'];
     const colors=['#3b82f6','#f59e0b','#ef4444','#10b981'];
-    const opts={responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:(ctx)=>' '+fmt(ctx.parsed)}}}};
+    const opts={responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{enabled:false}}};
     const chartDefs=[
-        {id:'chart-monthly-tax',data:monthTax},
-        {id:'chart-cumulative-tax',data:accumTax},
-        {id:'chart-monthly-cash',data:monthCash},
-        {id:'chart-cumulative-cash',data:accumCash}
+        {id:'chart-monthly-tax',   legendId:'legend-monthly-tax',   data:monthTax},
+        {id:'chart-cumulative-tax',legendId:'legend-cumulative-tax',data:accumTax},
+        {id:'chart-monthly-cash',  legendId:'legend-monthly-cash',  data:monthCash},
+        {id:'chart-cumulative-cash',legendId:'legend-cumulative-cash',data:accumCash}
     ];
-    chartDefs.forEach(({id,data})=>{
+    chartDefs.forEach(({id,legendId,data})=>{
         if(chartInstances[id])chartInstances[id].destroy();
         const el=document.getElementById(id);
-        if(el)chartInstances[id]=new Chart(el,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0}]},options:opts});
+        if(el)chartInstances[id]=new Chart(el,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0,hoverBorderWidth:0}]},options:opts});
+        // 金額付き凡例を更新
+        const leg=document.getElementById(legendId);
+        if(leg){
+            const total=data.reduce((s,v)=>s+(v||0),0);
+            leg.innerHTML=labels.map((lbl,i)=>{
+                const v=data[i]||0;
+                const pct=total>0?Math.round(v/total*100):0;
+                return`<div class="flex items-center justify-between gap-1">
+                    <span class="flex items-center gap-1 text-[10px] text-slate-600 truncate">
+                        <span class="w-2 h-2 rounded-full shrink-0" style="background:${colors[i]}"></span>
+                        ${lbl}
+                    </span>
+                    <span class="text-[10px] font-mono font-bold text-slate-700 shrink-0">${fmt(v)}<span class="text-[9px] text-slate-400 font-normal ml-0.5">${pct}%</span></span>
+                </div>`;
+            }).join('');
+        }
     });
 }
 
@@ -1390,9 +1479,36 @@ function runSimulation(){
     const cl=document.getElementById('chart-accum-label');if(cl)cl.textContent=targetMonthNum;
     const cl2=document.getElementById('chart-accum-label2');if(cl2)cl2.textContent=targetMonthNum;
 
-    const ky=(S.settings.kyosai||0)*12,id2=(S.settings.ideco||0)*12;
+    // 小規模共済：月別実績の累計÷月数×12 or 設定値×12
+    let kyosaiAnnual=0;
+    if(mode==='auto'&&month){
+        const[yStr3,mStr3]=month.split('-');const year3=parseInt(yStr3,10);const tM3=parseInt(mStr3,10);
+        let kyosaiAccum=0;
+        for(let mm=1;mm<=tM3;mm++){
+            const mKey3=`${year3}-${String(mm).padStart(2,'0')}`;
+            const mv=S.monthlyCosts[mKey3]?.['_kyosai'];
+            kyosaiAccum+=mv!==undefined?Number(mv):(S.settings.kyosai||0);
+        }
+        kyosaiAnnual=Math.floor((kyosaiAccum/tM3)*12);
+    }else{
+        kyosaiAnnual=(S.settings.kyosai||0)*12;
+    }
+    const id2=(S.settings.ideco||0)*12;
     const biz=Math.max(0,revY-expY);
-    const hlth=Math.min(1060000,Math.max(0,(biz-430000)*0.1+150000));
+    // 健保：月別上書きがあればその月×12、なければ自動概算
+    const hlthAuto=Math.min(1060000,Math.max(0,(biz-430000)*0.1+150000));
+    let hlth=hlthAuto;
+    if(mode==='auto'&&month){
+        const[yStr4,mStr4]=month.split('-');const year4=parseInt(yStr4,10);const tM4=parseInt(mStr4,10);
+        let hlthAccum=0;let hlthOverrideCount=0;
+        for(let mm=1;mm<=tM4;mm++){
+            const mKey4=`${year4}-${String(mm).padStart(2,'0')}`;
+            const mv=S.monthlyCosts[mKey4]?.['_hlth'];
+            if(mv!==undefined){hlthAccum+=Number(mv);hlthOverrideCount++;}
+        }
+        if(hlthOverrideCount>0)hlth=Math.floor((hlthAccum/hlthOverrideCount)*12);
+    }
+    const ky=kyosaiAnnual;
     const taxable=Math.max(0,biz-ded-480000-16980*12-hlth-ky-id2);
     let it=0;
     if(taxable<=1950000)it=taxable*.05;
@@ -1438,7 +1554,13 @@ function runSimulation(){
     const bta=document.getElementById('bar-tax-amt');if(bta)bta.textContent=fmt(totTax);
 
     // Cash flow
-    const net=wh?rev-whM:rev,inv=(S.settings.kyosai||0)+(S.settings.nisa||0)+(S.settings.ideco||0),free=net-pool-(expActual||exp)-inv;
+    const net=wh?rev-whM:rev;
+    // 今月の共済掛金（月別上書き or 設定値）
+    const kyosaiThisMonth=month&&S.monthlyCosts[month]?.['_kyosai']!==undefined
+        ?Number(S.monthlyCosts[month]['_kyosai'])
+        :(S.settings.kyosai||0);
+    const inv=kyosaiThisMonth+(S.settings.nisa||0)+(S.settings.ideco||0);
+    const free=net-pool-(expActual||exp)-inv;
     document.getElementById('flow-income').textContent=fmt(net);
     document.getElementById('flow-tax').textContent=`▲ ${fmt(pool)}`;
     document.getElementById('flow-invest').textContent=`▲ ${fmt(inv)}`;
@@ -1537,8 +1659,9 @@ function updateBracketSimulator(taxable,it,biz,ded,ky,id2,hlth,revY,expY){
         const dedLabel={blue65:'青色申告特別控除（65万）',blue55:'青色申告特別控除（55万）',blue10:'青色申告特別控除（10万）',white:'青色申告控除なし（白色）'};
         const filingDed=dedMap[tp.filingType||'blue65'];
         const basicDed=480000;
-        const kyosaiY=(S.settings.kyosai||0)*12;
-        const idecoY=(S.settings.ideco||0)*12;
+        // 実際のky値（渡された引数）
+        const kyosaiY=ky||0;
+        const idecoY=id2||0;
 
         const rows=[];
         // 年間売上（予測）
@@ -1549,9 +1672,10 @@ function updateBracketSimulator(taxable,it,biz,ded,ky,id2,hlth,revY,expY){
         rows.push({label:dedLabel[tp.filingType||'blue65'],value:filingDed,sign:'-'});
         rows.push({label:'基礎控除',value:basicDed,sign:'-'});
         rows.push({label:'国民年金（概算）',value:203760,sign:'-'});
-        // 健康保険（hlthの概算）
-        rows.push({label:'国民健康保険（概算）',value:hlth||0,sign:'-'});
-        if(kyosaiY>0)rows.push({label:'小規模企業共済',value:kyosaiY,sign:'-'});
+        // 健康保険（hlth = 手動入力 or 自動概算）
+        const hlthLabel=hlth===Math.min(1060000,Math.max(0,(biz-430000)*0.1+150000))?'国民健康保険（概算）':'国民健康保険（手動入力）';
+        rows.push({label:hlthLabel,value:hlth||0,sign:'-'});
+        if(kyosaiY>0)rows.push({label:'小規模企業共済（月別合計）',value:kyosaiY,sign:'-'});
         if(idecoY>0)rows.push({label:'iDeCo',value:idecoY,sign:'-'});
         // 追加控除
         const lifeIns=Number(document.getElementById('sim-life-ins')?.value)||0;

@@ -256,7 +256,7 @@
             <div class="bg-white rounded-2xl shadow-sm border p-5">
                 <h3 class="font-bold text-slate-800 border-b pb-3 mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                     <span class="text-sm sm:text-base"><i class="fas fa-chart-line text-purple-500 mr-2"></i>本年実績 ＆ 年間着地予測</span>
-                    <span class="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded w-fit" id="fc-logic-label">累計実績＋月平均×残月で算出</span>
+                    <span class="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded leading-relaxed break-all" id="fc-logic-label">累計実績＋月平均×残月で算出</span>
                 </h3>
                 <div class="space-y-4">
                     <!-- 確定分＋予測内訳 -->
@@ -388,9 +388,9 @@
                             </div>
                             <!-- ブラケット進捗バー -->
                             <div class="mt-3">
-                                <div class="flex justify-between text-[9px] text-slate-400 mb-1">
-                                    <span id="sim-bracket-low-label">前のブラケット</span>
-                                    <span id="sim-bracket-high-label">次のブラケット上限</span>
+                                <div class="flex justify-between text-[9px] text-slate-400 mb-1 gap-1">
+                                    <span id="sim-bracket-low-label" class="leading-tight">前のブラケット</span>
+                                    <span id="sim-bracket-high-label" class="leading-tight text-right">次のブラケット上限</span>
                                 </div>
                                 <div class="w-full bg-white/10 rounded-full h-2.5 overflow-hidden">
                                     <div id="sim-bracket-bar" class="h-2.5 rounded-full transition-all duration-500 bg-yellow-400" style="width:50%"></div>
@@ -399,19 +399,19 @@
                         </div>
                         <!-- 1段階下げるために必要な経費 -->
                         <div id="sim-next-bracket" class="bg-emerald-900/40 border border-emerald-500/30 rounded-xl p-3 mb-3">
-                            <p class="text-[10px] text-emerald-300 font-bold mb-1.5"><i class="fas fa-arrow-down mr-1"></i>1段階下の税率（<span id="sim-rate-next">-%</span>）にするために</p>
-                            <div class="flex flex-wrap gap-4">
-                                <div>
-                                    <p class="text-[9px] text-slate-400">必要な追加経費</p>
-                                    <p class="font-mono font-bold text-emerald-300 text-lg" id="sim-needed-expense">¥0</p>
+                            <p class="text-[10px] text-emerald-300 font-bold mb-2 leading-snug"><i class="fas fa-arrow-down mr-1"></i>1段階下の税率（<span id="sim-rate-next">-%</span>）にするために</p>
+                            <div class="grid grid-cols-1 gap-2">
+                                <div class="flex justify-between items-center bg-white/5 rounded-lg px-3 py-2">
+                                    <p class="text-[10px] text-slate-400">必要な追加経費</p>
+                                    <p class="font-mono font-bold text-emerald-300 text-base" id="sim-needed-expense">¥0</p>
                                 </div>
-                                <div>
-                                    <p class="text-[9px] text-slate-400">税率が下がる課税所得の上限</p>
+                                <div class="flex justify-between items-center bg-white/5 rounded-lg px-3 py-2">
+                                    <p class="text-[10px] text-slate-400">下がる上限（課税所得）</p>
                                     <p class="font-mono font-bold text-white text-sm" id="sim-next-threshold">¥0以下</p>
                                 </div>
-                                <div>
-                                    <p class="text-[9px] text-slate-400">節税効果（所得税）</p>
-                                    <p class="font-mono font-bold text-yellow-300 text-lg" id="sim-saving">¥0</p>
+                                <div class="flex justify-between items-center bg-white/5 rounded-lg px-3 py-2">
+                                    <p class="text-[10px] text-slate-400">節税効果（所得税）</p>
+                                    <p class="font-mono font-bold text-yellow-300 text-base" id="sim-saving">¥0</p>
                                 </div>
                             </div>
                         </div>
@@ -1562,7 +1562,7 @@ function runSimulation(){
 
     const lbl=document.getElementById('fc-logic-label');
     if(lbl)lbl.textContent=mode==='auto'
-        ?`売上: 月平均×12 ／ 経費: 按分12ヶ月＋変動費${targetMonthNum}ヶ月確定`
+        ?`売上: 月平均×12 ／ 経費: 変動費${targetMonthNum}ヶ月確定＋按分12ヶ月フル`
         :'手動入力（経費未入力=自動計算）';
     const cl=document.getElementById('chart-accum-label');if(cl)cl.textContent=targetMonthNum;
     const cl2=document.getElementById('chart-accum-label2');if(cl2)cl2.textContent=targetMonthNum;
@@ -1769,7 +1769,7 @@ function updateBracketSimulator(taxable,it,biz,ded,ky,id2,hlth,revY,expY,targetM
         rows.push({label:'年間売上（予測）',value:revY||0,sign:'+'});
         rows.push({label:'─',value:null,sign:'─'});
         // 経費
-        rows.push({label:`経費合計（${targetMonthNum||'?'}ヶ月確定分のみ・保守的）`,value:expY||0,sign:'-'});
+        rows.push({label:`経費合計（変動費${targetMonthNum||'?'}ヶ月確定分 ＋ 按分12ヶ月フル）`,value:expY||0,sign:'-'});
         rows.push({label:dedLabel[tp.filingType||'blue65'],value:filingDed,sign:'-'});
         rows.push({label:'基礎控除',value:basicDed,sign:'-'});
         rows.push({label:'国民年金（概算）',value:203760,sign:'-'});
@@ -1796,9 +1796,9 @@ function updateBracketSimulator(taxable,it,biz,ded,ky,id2,hlth,revY,expY,targetM
             if(r.sign==='─')return`<div class="border-t border-white/10 my-1"></div>`;
             const color=r.sign==='-'?'text-red-300':'text-white';
             const prefix=r.sign==='-'?'－ ':'　 ';
-            return`<div class="flex justify-between items-center py-0.5 gap-2">
-                <span class="text-slate-300 text-[10px] truncate">${prefix}${r.label}</span>
-                <span class="${color} shrink-0">${r.sign==='-'?'▲':''} ${fmt(r.value)}</span>
+            return`<div class="flex justify-between items-start py-0.5 gap-2">
+                <span class="text-slate-300 text-[10px] leading-snug flex-1 min-w-0">${prefix}${r.label}</span>
+                <span class="${color} shrink-0 text-[10px] text-right">${r.sign==='-'?'▲':''} ${fmt(r.value)}</span>
             </div>`;
         }).join('');
         if(simTaxableFinal)simTaxableFinal.textContent=fmt(adjTaxable);

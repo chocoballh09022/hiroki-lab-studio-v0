@@ -643,9 +643,40 @@
             <div class="bg-white rounded-2xl shadow-sm border p-6">
                 <h3 class="font-bold text-slate-800 border-b pb-3 mb-4"><i class="fas fa-piggy-bank text-emerald-500 mr-2"></i>積立・控除設定</h3>
                 <div class="space-y-3">
-                    <div><label class="block text-xs font-bold text-slate-500 mb-1">小規模企業共済（月額）</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="set-kyosai" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" onchange="saveSettings()"></div></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-1">小規模企業共済（月額・デフォルト）</label>
+                        <div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="set-kyosai" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" onchange="saveSettings()"></div>
+                        <p class="text-[10px] text-slate-400 mt-1">※ダッシュボードで月別に上書き可。年間計算は「確定分＋今月額×残月」で算出</p>
+                    </div>
                     <div><label class="block text-xs font-bold text-slate-500 mb-1">積立NISA（月額）</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="set-nisa" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" onchange="saveSettings()"></div></div>
                     <div><label class="block text-xs font-bold text-slate-500 mb-1">iDeCo（月額）</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="set-ideco" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" onchange="saveSettings()"></div></div>
+                </div>
+            </div>
+            <!-- 国民健康保険 -->
+            <div class="bg-white rounded-2xl shadow-sm border p-6">
+                <h3 class="font-bold text-slate-800 border-b pb-3 mb-3 flex items-center gap-2">
+                    <i class="fas fa-hospital text-sky-500"></i>国民健康保険の計算設定
+                </h3>
+                <div class="bg-sky-50 border border-sky-100 rounded-xl p-3 mb-4 text-xs text-sky-800 space-y-1.5 leading-relaxed">
+                    <p class="font-bold text-sky-700"><i class="fas fa-info-circle mr-1"></i>算出ロジックと更新タイミング</p>
+                    <p>国保は<strong>前年の確定申告の課税所得</strong>をもとに計算されます。今年の所得は来年の保険料に反映されます。</p>
+                    <p>計算式（東京23区モデル）:<br>
+                    　所得割 = 前年課税所得 × 9.24%<br>
+                    　均等割 = 52,000円/年<br>
+                    　合計（上限106万円）</p>
+                    <p class="text-sky-600 font-bold">📅 更新タイミング: 毎年6〜7月に自治体から通知書が届いたら、下の欄を更新 → ダッシュボードの月別欄で手動上書き</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">前年の課税所得（確定申告書の「課税される所得金額」）</label>
+                    <div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span>
+                    <input type="number" id="set-prev-taxable" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" placeholder="0（未入力の場合は今年の収支から概算）" onchange="saveSettings()"></div>
+                    <p class="text-[10px] text-slate-400 mt-1">確定申告書 → 「課税される所得金額」の欄の数字を入力してください</p>
+                </div>
+                <div class="mt-3 bg-slate-50 p-3 rounded-lg border">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-slate-600">概算 国保年額</span>
+                        <span class="font-mono font-bold text-sky-700" id="hlth-estimate-display">¥—</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-1">※実際の保険料はダッシュボードの月別欄で上書きすると正確に反映されます</p>
                 </div>
             </div>
             <!-- API Key -->
@@ -1133,7 +1164,7 @@
 'use strict';
 const STORAGE_KEY='cr_erp_v5';
 const API_KEY='';
-const DEF={settings:{apportion:[{id:'rent',name:'家賃',ratio:10,defaultAmount:129000,yayoiKamoku:'地代家賃（自宅兼事務所用）',torihikiSaki:'アイレントホーム株式会社',taxType:'非課税'},{id:'util',name:'水光熱費',ratio:20,defaultAmount:10000,yayoiKamoku:'水道光熱費',torihikiSaki:'',taxType:'課対仕入10%'},{id:'phone',name:'通信費・スマホ代',ratio:50,defaultAmount:8000,yayoiKamoku:'通信費',torihikiSaki:'',taxType:'課対仕入10%'}],kyosai:70000,nisa:50000,ideco:0,subs:[],externalTools:[{name:'Google Drive',url:'https://drive.google.com/'}],workTables:[{name:'株式会社アイ・ファクトリー',url:'https://docs.google.com/spreadsheets/d/1GOf5BfvJQXjpmZXhzeDb_eLJsppWs8vqyW6rMDxjDkk/edit?pli=1&gid=325275437#gid=325275437'},{name:'株式会社A1Growth',url:'https://docs.google.com/spreadsheets/d/1ToDjuYoWjBuGSb-xkHVYKB3yd5K21GpZHAM2alnKxAQ/edit?gid=1604662573#gid=1604662573'}],memo:'',geminiApiKey:'',withholding:true,
+const DEF={settings:{apportion:[{id:'rent',name:'家賃',ratio:10,defaultAmount:129000,yayoiKamoku:'地代家賃（自宅兼事務所用）',torihikiSaki:'アイレントホーム株式会社',taxType:'非課税'},{id:'util',name:'水光熱費',ratio:20,defaultAmount:10000,yayoiKamoku:'水道光熱費',torihikiSaki:'',taxType:'課対仕入10%'},{id:'phone',name:'通信費・スマホ代',ratio:50,defaultAmount:8000,yayoiKamoku:'通信費',torihikiSaki:'',taxType:'課対仕入10%'}],kyosai:70000,nisa:50000,ideco:0,prevYearTaxable:0,subs:[],externalTools:[{name:'Google Drive',url:'https://drive.google.com/'}],workTables:[{name:'株式会社アイ・ファクトリー',url:'https://docs.google.com/spreadsheets/d/1GOf5BfvJQXjpmZXhzeDb_eLJsppWs8vqyW6rMDxjDkk/edit?pli=1&gid=325275437#gid=325275437'},{name:'株式会社A1Growth',url:'https://docs.google.com/spreadsheets/d/1ToDjuYoWjBuGSb-xkHVYKB3yd5K21GpZHAM2alnKxAQ/edit?gid=1604662573#gid=1604662573'}],memo:'',geminiApiKey:'',withholding:true,
     // ⑤ 税務プロファイル
     taxProfile:{
         filingType:'blue65',    // blue65 / blue55 / blue10 / white
@@ -1163,6 +1194,7 @@ function migrate(d){
     if(!Array.isArray(s.settings.workTables))s.settings.workTables=b.settings.workTables;
     if(s.settings.geminiApiKey===undefined)s.settings.geminiApiKey='';
     if(s.settings.withholding===undefined)s.settings.withholding=true;
+    if(s.settings.prevYearTaxable===undefined)s.settings.prevYearTaxable=0;
     if(!s.settings.taxProfile)s.settings.taxProfile={...b.settings.taxProfile};
     else s.settings.taxProfile={...b.settings.taxProfile,...s.settings.taxProfile};
     if(!Array.isArray(s.furusato))s.furusato=[];
@@ -1432,7 +1464,9 @@ function runSimulation(){
                 S.settings.apportion.forEach(a=>{let v=S.monthlyCosts[mKey]?.[a.id];if(v===undefined)v=a.defaultAmount;appTAccum+=Math.floor(Number(v)*(a.ratio/100));});
             }
             expAccum=appTAccum+varEAccum+(S.settings.subs.reduce((s,c)=>s+Number(c.amount||0),0))*targetMonthNum;
-            revY=Math.floor((revAccum/targetMonthNum)*12);expY=Math.floor((expAccum/targetMonthNum)*12);
+            // ① 経費は確定分のみ（平均予測なし）。売上予測から確定経費を引くため課税所得は保守的（多め）に出る
+            revY=Math.floor((revAccum/targetMonthNum)*12);
+            expY=expAccum; // ← 確定分のみ・年換算しない
         }
     }else{
         rev=Number(document.getElementById('dash-revenue').value)||0;
@@ -1475,11 +1509,13 @@ function runSimulation(){
     const maEl=document.getElementById('fc-monthly-avg');if(maEl)maEl.textContent=fmt(monthlyAvg);
 
     const lbl=document.getElementById('fc-logic-label');
-    if(lbl)lbl.textContent=mode==='auto'?`累計実績(${targetMonthNum}ヶ月) ＋ 月平均×残${remainMonths}ヶ月`:'入力値×12で算出';
+    if(lbl)lbl.textContent=mode==='auto'
+        ?`売上: 月平均×12予測 ／ 経費: ${targetMonthNum}ヶ月確定分のみ（保守的）`
+        :'入力値×12で算出';
     const cl=document.getElementById('chart-accum-label');if(cl)cl.textContent=targetMonthNum;
     const cl2=document.getElementById('chart-accum-label2');if(cl2)cl2.textContent=targetMonthNum;
 
-    // 小規模共済：月別実績の累計÷月数×12 or 設定値×12
+    // ② 小規模共済：確定分合計 ＋ 今月額 × 残月（開始月が途中でも正確に反映）
     let kyosaiAnnual=0;
     if(mode==='auto'&&month){
         const[yStr3,mStr3]=month.split('-');const year3=parseInt(yStr3,10);const tM3=parseInt(mStr3,10);
@@ -1489,15 +1525,22 @@ function runSimulation(){
             const mv=S.monthlyCosts[mKey3]?.['_kyosai'];
             kyosaiAccum+=mv!==undefined?Number(mv):(S.settings.kyosai||0);
         }
-        kyosaiAnnual=Math.floor((kyosaiAccum/tM3)*12);
+        // 今月の掛金を残月に適用
+        const thisMonthKyosai=S.monthlyCosts[month]?.['_kyosai']!==undefined
+            ?Number(S.monthlyCosts[month]['_kyosai']):(S.settings.kyosai||0);
+        const remainM=12-tM3;
+        kyosaiAnnual=kyosaiAccum+thisMonthKyosai*remainM;
     }else{
         kyosaiAnnual=(S.settings.kyosai||0)*12;
     }
     const id2=(S.settings.ideco||0)*12;
     const biz=Math.max(0,revY-expY);
-    // 健保：月別上書きがあればその月×12、なければ自動概算
-    const hlthAuto=Math.min(1060000,Math.max(0,(biz-430000)*0.1+150000));
-    let hlth=hlthAuto;
+    // ③ 国保：前年課税所得ベースで概算（東京23区モデル）→ 手動上書き可
+    const prevYearTaxable=Number(S.settings.prevYearTaxable||0);
+    const hlthFromPrev=prevYearTaxable>0
+        ?Math.min(1060000,Math.max(0,prevYearTaxable*0.0924+52000))
+        :Math.min(1060000,Math.max(0,(biz-430000)*0.1+150000));
+    let hlth=hlthFromPrev;
     if(mode==='auto'&&month){
         const[yStr4,mStr4]=month.split('-');const year4=parseInt(yStr4,10);const tM4=parseInt(mStr4,10);
         let hlthAccum=0;let hlthOverrideCount=0;
@@ -1668,14 +1711,14 @@ function updateBracketSimulator(taxable,it,biz,ded,ky,id2,hlth,revY,expY){
         rows.push({label:'年間売上（予測）',value:revY||0,sign:'+'});
         rows.push({label:'─',value:null,sign:'─'});
         // 経費
-        rows.push({label:'経費合計（税務計上）',value:expY||0,sign:'-'});
+        rows.push({label:`経費合計（${targetMonthNum||'?'}ヶ月確定分のみ・保守的）`,value:expY||0,sign:'-'});
         rows.push({label:dedLabel[tp.filingType||'blue65'],value:filingDed,sign:'-'});
         rows.push({label:'基礎控除',value:basicDed,sign:'-'});
         rows.push({label:'国民年金（概算）',value:203760,sign:'-'});
         // 健康保険（hlth = 手動入力 or 自動概算）
         const hlthLabel=hlth===Math.min(1060000,Math.max(0,(biz-430000)*0.1+150000))?'国民健康保険（概算）':'国民健康保険（手動入力）';
         rows.push({label:hlthLabel,value:hlth||0,sign:'-'});
-        if(kyosaiY>0)rows.push({label:'小規模企業共済（月別合計）',value:kyosaiY,sign:'-'});
+        if(kyosaiY>0)rows.push({label:'小規模企業共済（確定分＋今月額×残月）',value:kyosaiY,sign:'-'});
         if(idecoY>0)rows.push({label:'iDeCo',value:idecoY,sign:'-'});
         // 追加控除
         const lifeIns=Number(document.getElementById('sim-life-ins')?.value)||0;
@@ -1772,6 +1815,19 @@ function renderSettings(){
     document.getElementById('set-nisa').value=S.settings.nisa||0;
     document.getElementById('set-ideco').value=S.settings.ideco||0;
     document.getElementById('set-api-key').value=S.settings.geminiApiKey||'';
+    const prevTaxEl=document.getElementById('set-prev-taxable');
+    if(prevTaxEl)prevTaxEl.value=S.settings.prevYearTaxable||'';
+    // 国保概算表示
+    const hlthEl=document.getElementById('hlth-estimate-display');
+    if(hlthEl){
+        const pt=Number(S.settings.prevYearTaxable||0);
+        if(pt>0){
+            const est=Math.min(1060000,Math.max(0,pt*0.0924+52000));
+            hlthEl.textContent=`${fmt(est)}/年（月額 ${fmt(Math.round(est/12))}）`;
+        }else{
+            hlthEl.textContent='前年課税所得を入力すると計算されます';
+        }
+    }
     // Tax profile radios
     const tp=S.settings.taxProfile||{};
     document.querySelectorAll('[name="filing"]').forEach(r=>r.checked=r.value===(tp.filingType||'blue65'));
@@ -1806,7 +1862,15 @@ function saveTaxProfile(){
 function addApportion(){S.settings.apportion.push({id:'a'+Date.now(),name:'新規項目',ratio:10,defaultAmount:5000,yayoiKamoku:'',torihikiSaki:'',taxType:'課対仕入10%'});save();renderSettings();dashMonthChanged();}
 function updateApportion(i,k,v){S.settings.apportion[i][k]=(k==='ratio'||k==='defaultAmount')?Number(v):v;save();dashMonthChanged();}
 function deleteApportion(i){S.settings.apportion.splice(i,1);save();renderSettings();dashMonthChanged();}
-function saveSettings(){S.settings.kyosai=Number(document.getElementById('set-kyosai').value)||0;S.settings.nisa=Number(document.getElementById('set-nisa').value)||0;S.settings.ideco=Number(document.getElementById('set-ideco').value)||0;S.settings.geminiApiKey=document.getElementById('set-api-key').value.trim();save();runSimulation();renderSettings();}
+function saveSettings(){
+    S.settings.kyosai=Number(document.getElementById('set-kyosai').value)||0;
+    S.settings.nisa=Number(document.getElementById('set-nisa').value)||0;
+    S.settings.ideco=Number(document.getElementById('set-ideco').value)||0;
+    S.settings.geminiApiKey=document.getElementById('set-api-key').value.trim();
+    const prevTaxEl=document.getElementById('set-prev-taxable');
+    if(prevTaxEl)S.settings.prevYearTaxable=Number(prevTaxEl.value)||0;
+    save();runSimulation();renderSettings();
+}
 function renderTools(){const c=document.getElementById('tools-list');c.innerHTML='';S.settings.externalTools.forEach((tool,i)=>{const div=document.createElement('div');div.className='flex flex-col gap-2 bg-slate-50 border p-3 rounded-lg';div.innerHTML=`<div class="flex justify-between items-center gap-2"><input type="text" value="${tool.name}" onchange="updateTool(${i},'name',this.value)" class="flex-1 bg-white border rounded p-1.5 text-sm font-bold" placeholder="ツール名"><button onclick="deleteTool(${i})" class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash text-sm"></i></button></div><div class="flex items-center gap-2"><i class="fas fa-link text-slate-400"></i><input type="text" value="${tool.url}" onchange="updateTool(${i},'url',this.value)" class="flex-1 bg-white border rounded p-1.5 text-xs font-mono" placeholder="https://..."><a href="${tool.url}" target="_blank" class="text-blue-500 hover:text-blue-700 p-1"><i class="fas fa-external-link-alt"></i></a></div>`;c.appendChild(div);});}
 function addTool(){S.settings.externalTools.push({name:'新規ツール',url:''});save();renderTools();}
 function updateTool(i,k,v){S.settings.externalTools[i][k]=v;save();renderTools();}

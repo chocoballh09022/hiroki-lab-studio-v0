@@ -138,6 +138,19 @@
 
 <!-- ==================== DASHBOARD ==================== -->
 <div id="tab-dashboard" class="tab-content active">
+
+    <!-- 国保更新通知バナー -->
+    <div id="hlth-notify-banner" class="hidden mb-4 bg-sky-50 border border-sky-200 rounded-2xl p-4 flex items-start justify-between gap-3">
+        <div class="flex items-start gap-3">
+            <i class="fas fa-hospital text-sky-500 text-xl mt-0.5 shrink-0"></i>
+            <div>
+                <p class="text-sm font-bold text-sky-800">そろそろ国保の通知書が届く時期です</p>
+                <p class="text-xs text-sky-600 mt-0.5">通知書が届いたら、設定タブ「国民健康保険の計算設定」で<strong>前年の課税所得</strong>を更新してください。より正確な税金シミュレーションができます。</p>
+                <button onclick="switchTab('settings');setTimeout(()=>document.querySelector('#tab-settings').scrollTop=0,200)" class="mt-2 text-xs bg-sky-600 text-white px-3 py-1.5 rounded font-bold hover:bg-sky-700"><i class="fas fa-cog mr-1"></i>設定タブへ</button>
+            </div>
+        </div>
+        <button onclick="dismissHlthNotify()" class="text-sky-400 hover:text-sky-600 shrink-0 p-1"><i class="fas fa-times"></i></button>
+    </div>
     <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4 border-b pb-4">
         <div>
             <h2 class="text-xl sm:text-3xl font-bold text-slate-800">Financial Dashboard</h2>
@@ -519,6 +532,34 @@
                     </div>
                 </div>
                 <!-- 凡例はチャート下に金額付きで表示 -->
+            </div>
+
+            <!-- 月別売上推移 + クライアント別比率 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <!-- 月別売上棒グラフ -->
+                <div class="bg-white rounded-2xl shadow-sm border p-5">
+                    <h3 class="font-bold text-slate-800 text-sm border-b pb-3 mb-4 flex items-center justify-between">
+                        <span><i class="fas fa-chart-bar text-blue-500 mr-2"></i>月別売上推移</span>
+                        <span class="text-[10px] font-normal text-slate-400" id="monthly-bar-year-label"></span>
+                    </h3>
+                    <div style="position:relative;height:180px">
+                        <canvas id="chart-monthly-bar"></canvas>
+                    </div>
+                    <div class="flex justify-between items-center mt-3 bg-slate-50 rounded-lg px-3 py-2">
+                        <span class="text-[10px] text-slate-500">年間合計</span>
+                        <span class="font-mono font-bold text-slate-800 text-sm" id="monthly-bar-total">¥0</span>
+                    </div>
+                </div>
+                <!-- クライアント別売上比率 -->
+                <div class="bg-white rounded-2xl shadow-sm border p-5">
+                    <h3 class="font-bold text-slate-800 text-sm border-b pb-3 mb-4">
+                        <i class="fas fa-users text-emerald-500 mr-2"></i>クライアント別売上比率
+                    </h3>
+                    <div style="max-width:160px;margin:0 auto 0.75rem">
+                        <canvas id="chart-client-ratio"></canvas>
+                    </div>
+                    <div id="legend-client-ratio" class="space-y-1.5"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -1222,6 +1263,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     initDD();
     initPaste();
     loadGapiAndGis();
+    checkHlthNotify();
 });
 function renderAll(){
     document.getElementById('quick-memo').value=S.settings.memo||'';
@@ -1423,6 +1465,108 @@ function setDashMode(mode,sv=true){
 }
 
 let chartInstances={};
+
+// ===== 月別売上棒グラフ =====
+function updateMonthlyBarChart(){
+    const month=document.getElementById('dash-month').value;
+    if(!month)return;
+    const[yStr]=month.split('-');const year=parseInt(yStr,10);
+    const months=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+    const data=months.map((_,i)=>{
+        const mKey=`${year}-${String(i+1).padStart(2,'0')}`;
+        return S.incomes.filter(inc=>{const d=inc.reqDate||inc.payDate||'';return d.startsWith(mKey);})
+            .reduce((s,inc)=>s+Number(inc.net||inc.total||0),0);
+    });
+    const total=data.reduce((s,v)=>s+v,0);
+    const currentM=parseInt(month.split('-')[1],10)-1;
+    const bgColors=data.map((_,i)=>i===currentM?'#3b82f6':i<currentM?'#93c5fd':'#e2e8f0');
+
+    const lbl=document.getElementById('monthly-bar-year-label');
+    if(lbl)lbl.textContent=`${year}年`;
+    const tot=document.getElementById('monthly-bar-total');
+    if(tot)tot.textContent=fmt(total);
+
+    if(chartInstances['monthly-bar'])chartInstances['monthly-bar'].destroy();
+    const el=document.getElementById('chart-monthly-bar');
+    if(!el)return;
+    chartInstances['monthly-bar']=new Chart(el,{
+        type:'bar',
+        data:{labels:months,datasets:[{data,backgroundColor:bgColors,borderRadius:4,borderSkipped:false}]},
+        options:{
+            responsive:true,maintainAspectRatio:false,
+            plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${fmt(ctx.parsed.y)}`}}},
+            scales:{
+                x:{grid:{display:false},ticks:{font:{size:9},color:'#94a3b8'}},
+                y:{grid:{color:'#f1f5f9'},ticks:{font:{size:9},color:'#94a3b8',callback:v=>v>=10000?`${Math.round(v/10000)}万`:v}}
+            }
+        }
+    });
+}
+
+// ===== クライアント別売上比率 =====
+function updateClientRatioChart(){
+    const month=document.getElementById('dash-month').value;
+    if(!month)return;
+    const[yStr]=month.split('-');const year=parseInt(yStr,10);
+    // 対象年の全収入をクライアント別に集計
+    const clientMap={};
+    S.incomes.forEach(inc=>{
+        const d=inc.reqDate||inc.payDate||'';
+        if(!d.startsWith(String(year)))return;
+        const c=inc.client||'その他';
+        clientMap[c]=(clientMap[c]||0)+Number(inc.net||inc.total||0);
+    });
+    const sorted=Object.entries(clientMap).sort((a,b)=>b[1]-a[1]);
+    if(!sorted.length){
+        const leg=document.getElementById('legend-client-ratio');
+        if(leg)leg.innerHTML='<p class="text-xs text-slate-400 text-center py-4">収入データがありません</p>';
+        return;
+    }
+    const labels=sorted.map(([c])=>c);
+    const values=sorted.map(([,v])=>v);
+    const total=values.reduce((s,v)=>s+v,0);
+    const palette=['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#ec4899','#6366f1','#84cc16'];
+    const colors=labels.map((_,i)=>palette[i%palette.length]);
+
+    if(chartInstances['client-ratio'])chartInstances['client-ratio'].destroy();
+    const el=document.getElementById('chart-client-ratio');
+    if(el)chartInstances['client-ratio']=new Chart(el,{
+        type:'doughnut',
+        data:{labels,datasets:[{data:values,backgroundColor:colors,borderWidth:0}]},
+        options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${fmt(ctx.parsed)}`}}}}
+    });
+    const leg=document.getElementById('legend-client-ratio');
+    if(leg){
+        leg.innerHTML=sorted.map(([c,v],i)=>{
+            const pct=total>0?Math.round(v/total*100):0;
+            const warn=pct>=50?'<span class="text-[9px] text-amber-500 font-bold ml-1">⚠️ 依存注意</span>':'';
+            return`<div class="flex items-center justify-between gap-1 py-0.5">
+                <span class="flex items-center gap-1.5 text-[10px] text-slate-600 truncate min-w-0 flex-1">
+                    <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${colors[i]}"></span>
+                    <span class="truncate">${c}</span>${warn}
+                </span>
+                <span class="text-[10px] font-mono font-bold text-slate-700 shrink-0">${fmt(v)} <span class="text-slate-400 font-normal">${pct}%</span></span>
+            </div>`;
+        }).join('');
+    }
+}
+
+// ===== 国保更新通知 =====
+function checkHlthNotify(){
+    const m=new Date().getMonth()+1; // 1-12
+    if(m<6||m>7)return; // 6〜7月のみ表示
+    const year=new Date().getFullYear();
+    const dismissedKey=`hlth_notify_dismissed_${year}`;
+    if(localStorage.getItem(dismissedKey))return;
+    const banner=document.getElementById('hlth-notify-banner');
+    if(banner)banner.classList.remove('hidden');
+}
+function dismissHlthNotify(){
+    const year=new Date().getFullYear();
+    localStorage.setItem(`hlth_notify_dismissed_${year}`,'1');
+    const banner=document.getElementById('hlth-notify-banner');
+    if(banner)banner.classList.add('hidden');
+}
 function updatePieCharts(monthTax,accumTax,monthCash,accumCash){
     const labels=['手取り','経費','税・社保','積立'];
     const colors=['#3b82f6','#f59e0b','#ef4444','#10b981'];
@@ -1700,6 +1844,8 @@ function runSimulation(){
 
     // ===== 税率ブラケットシミュレーター =====
     updateBracketSimulator(taxable,it,biz,ded,ky,id2,hlth,revY,expY,targetMonthNum);
+    updateMonthlyBarChart();
+    updateClientRatioChart();
 }
 
 function calcIT(tx){

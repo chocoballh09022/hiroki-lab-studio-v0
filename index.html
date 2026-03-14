@@ -178,13 +178,13 @@
                     <div>
                         <label class="block text-xs font-bold text-slate-500 mb-1">総売上（発生・請求ベース）</label>
                         <div class="relative"><span class="absolute left-3 top-2.5 text-slate-400">¥</span>
-                        <input type="number" id="dash-revenue" class="w-full bg-slate-50 border rounded-lg py-2 pl-8 pr-3 font-bold disabled:opacity-60 disabled:bg-slate-100" oninput="runSimulation()" readonly></div>
+                        <input type="number" id="dash-revenue" class="w-full bg-slate-50 border rounded-lg py-2 pl-8 pr-3 font-bold disabled:opacity-60 disabled:bg-slate-100" oninput="saveManualInput('rev',this.value)" readonly></div>
                         <p id="dash-rev-help" class="text-[10px] text-slate-400 mt-1">※収入管理表の対象月の「請求日(発生日)」から合算</p>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 mb-1">経費合計（按分＋支出管理表）</label>
                         <div class="relative"><span class="absolute left-3 top-2.5 text-slate-400">¥</span>
-                        <input type="number" id="dash-expense" class="w-full bg-slate-50 border rounded-lg py-2 pl-8 pr-3 font-bold disabled:opacity-60 disabled:bg-slate-100" oninput="runSimulation()" readonly></div>
+                        <input type="number" id="dash-expense" class="w-full bg-slate-50 border rounded-lg py-2 pl-8 pr-3 font-bold disabled:opacity-60 disabled:bg-slate-100" oninput="saveManualInput('exp',this.value)" readonly></div>
                         <p id="dash-exp-help" class="text-[10px] text-slate-400 mt-1">※按分経費＋支出管理表＋サブスクから合算</p>
                     </div>
                     <div class="bg-slate-50 p-3 rounded-xl border">
@@ -646,6 +646,10 @@
                     <div><label class="block text-xs font-bold text-slate-500 mb-1">小規模企業共済（月額・デフォルト）</label>
                         <div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="set-kyosai" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" onchange="saveSettings()"></div>
                         <p class="text-[10px] text-slate-400 mt-1">※ダッシュボードで月別に上書き可。年間計算は「確定分＋今月額×残月」で算出</p>
+                    </div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-1">小規模企業共済 開始月</label>
+                        <input type="month" id="set-kyosai-start" class="w-full bg-slate-50 border rounded p-2 font-mono text-sm" onchange="saveSettings()">
+                        <p class="text-[10px] text-slate-400 mt-1">開始月より前は0円として計算されます</p>
                     </div>
                     <div><label class="block text-xs font-bold text-slate-500 mb-1">積立NISA（月額）</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="set-nisa" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" onchange="saveSettings()"></div></div>
                     <div><label class="block text-xs font-bold text-slate-500 mb-1">iDeCo（月額）</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="set-ideco" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" onchange="saveSettings()"></div></div>
@@ -1164,7 +1168,7 @@
 'use strict';
 const STORAGE_KEY='cr_erp_v5';
 const API_KEY='';
-const DEF={settings:{apportion:[{id:'rent',name:'家賃',ratio:10,defaultAmount:129000,yayoiKamoku:'地代家賃（自宅兼事務所用）',torihikiSaki:'アイレントホーム株式会社',taxType:'非課税'},{id:'util',name:'水光熱費',ratio:20,defaultAmount:10000,yayoiKamoku:'水道光熱費',torihikiSaki:'',taxType:'課対仕入10%'},{id:'phone',name:'通信費・スマホ代',ratio:50,defaultAmount:8000,yayoiKamoku:'通信費',torihikiSaki:'',taxType:'課対仕入10%'}],kyosai:70000,nisa:50000,ideco:0,prevYearTaxable:0,subs:[],externalTools:[{name:'Google Drive',url:'https://drive.google.com/'}],workTables:[{name:'株式会社アイ・ファクトリー',url:'https://docs.google.com/spreadsheets/d/1GOf5BfvJQXjpmZXhzeDb_eLJsppWs8vqyW6rMDxjDkk/edit?pli=1&gid=325275437#gid=325275437'},{name:'株式会社A1Growth',url:'https://docs.google.com/spreadsheets/d/1ToDjuYoWjBuGSb-xkHVYKB3yd5K21GpZHAM2alnKxAQ/edit?gid=1604662573#gid=1604662573'}],memo:'',geminiApiKey:'',withholding:true,
+const DEF={settings:{apportion:[{id:'rent',name:'家賃',ratio:10,defaultAmount:129000,yayoiKamoku:'地代家賃（自宅兼事務所用）',torihikiSaki:'アイレントホーム株式会社',taxType:'非課税'},{id:'util',name:'水光熱費',ratio:20,defaultAmount:10000,yayoiKamoku:'水道光熱費',torihikiSaki:'',taxType:'課対仕入10%'},{id:'phone',name:'通信費・スマホ代',ratio:50,defaultAmount:8000,yayoiKamoku:'通信費',torihikiSaki:'',taxType:'課対仕入10%'}],kyosai:70000,nisa:50000,ideco:0,prevYearTaxable:0,kyosaiStartMonth:'',subs:[],externalTools:[{name:'Google Drive',url:'https://drive.google.com/'}],workTables:[{name:'株式会社アイ・ファクトリー',url:'https://docs.google.com/spreadsheets/d/1GOf5BfvJQXjpmZXhzeDb_eLJsppWs8vqyW6rMDxjDkk/edit?pli=1&gid=325275437#gid=325275437'},{name:'株式会社A1Growth',url:'https://docs.google.com/spreadsheets/d/1ToDjuYoWjBuGSb-xkHVYKB3yd5K21GpZHAM2alnKxAQ/edit?gid=1604662573#gid=1604662573'}],memo:'',geminiApiKey:'',withholding:true,
     // ⑤ 税務プロファイル
     taxProfile:{
         filingType:'blue65',    // blue65 / blue55 / blue10 / white
@@ -1195,6 +1199,7 @@ function migrate(d){
     if(s.settings.geminiApiKey===undefined)s.settings.geminiApiKey='';
     if(s.settings.withholding===undefined)s.settings.withholding=true;
     if(s.settings.prevYearTaxable===undefined)s.settings.prevYearTaxable=0;
+    if(s.settings.kyosaiStartMonth===undefined)s.settings.kyosaiStartMonth='';
     if(!s.settings.taxProfile)s.settings.taxProfile={...b.settings.taxProfile};
     else s.settings.taxProfile={...b.settings.taxProfile,...s.settings.taxProfile};
     if(!Array.isArray(s.furusato))s.furusato=[];
@@ -1266,6 +1271,18 @@ function dashMonthChanged(){
     if(!S.monthlyCosts[month])S.monthlyCosts[month]={};
     const cont=document.getElementById('dash-monthly-costs');
     cont.innerHTML='';
+
+    // 手動モードの場合、その月の保存値をロード
+    if(S.dashMode==='manual'){
+        const rV=document.getElementById('dash-revenue');
+        const rE=document.getElementById('dash-expense');
+        const savedRev=S.monthlyCosts[month]['_manual_rev'];
+        const savedExp=S.monthlyCosts[month]['_manual_exp'];
+        if(rV&&savedRev!==undefined)rV.value=savedRev;
+        else if(rV)rV.value='';
+        if(rE&&savedExp!==undefined)rE.value=savedExp;
+        else if(rE)rE.value='';
+    }
 
     // 按分経費
     S.settings.apportion.forEach(app=>{
@@ -1371,6 +1388,13 @@ function saveMonthlySpecial(key,val){
     }
     save();runSimulation();
 }
+function saveManualInput(key,val){
+    const month=document.getElementById('dash-month').value;
+    if(!month)return;
+    if(!S.monthlyCosts[month])S.monthlyCosts[month]={};
+    S.monthlyCosts[month][`_manual_${key}`]=Number(val)||0;
+    save();runSimulation();
+}
 function setDashMode(mode,sv=true){
     S.dashMode=mode;if(sv)save();
     const bA=document.getElementById('btn-mode-auto'),bM=document.getElementById('btn-mode-manual'),rV=document.getElementById('dash-revenue'),rE=document.getElementById('dash-expense'),ind=document.getElementById('dash-mode-indicator'),hR=document.getElementById('dash-rev-help'),hE=document.getElementById('dash-exp-help');
@@ -1383,8 +1407,16 @@ function setDashMode(mode,sv=true){
     }else{
         bM.className=on;bA.className=off;
         rV.readOnly=rV.disabled=rE.readOnly=rE.disabled=false;
-        ind.textContent='手動入力';ind.className='text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-1 rounded';
+        ind.textContent='手動入力（月別保存）';ind.className='text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-1 rounded';
         hR.style.display=hE.style.display='none';
+        // 対象月の保存済み手動値をロード
+        const month=document.getElementById('dash-month').value;
+        if(month&&S.monthlyCosts[month]){
+            const savedRev=S.monthlyCosts[month]['_manual_rev'];
+            const savedExp=S.monthlyCosts[month]['_manual_exp'];
+            if(savedRev!==undefined)rV.value=savedRev;
+            if(savedExp!==undefined)rE.value=savedExp;
+        }
     }
     runSimulation();
 }
@@ -1463,14 +1495,22 @@ function runSimulation(){
                 varEAccum+=S.expenses.filter(e=>e.payDate&&e.payDate.startsWith(mKey)).reduce((s,e)=>s+Number(e.net||e.total||0),0);
                 S.settings.apportion.forEach(a=>{let v=S.monthlyCosts[mKey]?.[a.id];if(v===undefined)v=a.defaultAmount;appTAccum+=Math.floor(Number(v)*(a.ratio/100));});
             }
+            // 按分: 12ヶ月分フル（毎月確定的に発生）
+            // 変動費: 確定分のみ（月平均予測なし）
+            // サブスク: 12ヶ月分フル（毎月確定的に発生）
+            const appTFull=Math.floor(appTAccum/targetMonthNum)*12; // 按分の月平均×12
+            const subTFull=S.settings.subs.reduce((s,c)=>s+Number(c.amount||0),0)*12; // サブスク12ヶ月
             expAccum=appTAccum+varEAccum+(S.settings.subs.reduce((s,c)=>s+Number(c.amount||0),0))*targetMonthNum;
-            // ① 経費は確定分のみ（平均予測なし）。売上予測から確定経費を引くため課税所得は保守的（多め）に出る
             revY=Math.floor((revAccum/targetMonthNum)*12);
-            expY=expAccum; // ← 確定分のみ・年換算しない
+            // expY = 按分(12ヶ月フル) + 変動費(確定分のみ) + サブスク(12ヶ月フル)
+            expY=appTFull+varEAccum+subTFull;
         }
     }else{
-        rev=Number(document.getElementById('dash-revenue').value)||0;
-        exp=Number(document.getElementById('dash-expense').value)||0;
+        // 手動モード：月別保存値があれば使う、なければ入力欄の現在値
+        const savedRev=month&&S.monthlyCosts[month]?.['_manual_rev'];
+        const savedExp=month&&S.monthlyCosts[month]?.['_manual_exp'];
+        rev=savedRev!==undefined?savedRev:(Number(document.getElementById('dash-revenue').value)||0);
+        exp=savedExp!==undefined?savedExp:(Number(document.getElementById('dash-expense').value)||0);
         expActual=exp;expDeductOnly=exp;
         revAccum=rev*targetMonthNum;expAccum=exp*targetMonthNum;revY=rev*12;expY=exp*12;
     }
@@ -1515,19 +1555,25 @@ function runSimulation(){
     const cl=document.getElementById('chart-accum-label');if(cl)cl.textContent=targetMonthNum;
     const cl2=document.getElementById('chart-accum-label2');if(cl2)cl2.textContent=targetMonthNum;
 
-    // ② 小規模共済：確定分合計 ＋ 今月額 × 残月（開始月が途中でも正確に反映）
+    // ② 小規模共済：確定分合計 ＋ 今月額 × 残月
+    // 開始月より前は0、開始月以降で未入力はデフォルト値
     let kyosaiAnnual=0;
     if(mode==='auto'&&month){
         const[yStr3,mStr3]=month.split('-');const year3=parseInt(yStr3,10);const tM3=parseInt(mStr3,10);
+        const kyosaiStartMonth=S.settings.kyosaiStartMonth||''; // 例: "2025-03"
         let kyosaiAccum=0;
         for(let mm=1;mm<=tM3;mm++){
             const mKey3=`${year3}-${String(mm).padStart(2,'0')}`;
+            // 開始月より前は0
+            if(kyosaiStartMonth&&mKey3<kyosaiStartMonth){continue;}
             const mv=S.monthlyCosts[mKey3]?.['_kyosai'];
             kyosaiAccum+=mv!==undefined?Number(mv):(S.settings.kyosai||0);
         }
-        // 今月の掛金を残月に適用
-        const thisMonthKyosai=S.monthlyCosts[month]?.['_kyosai']!==undefined
-            ?Number(S.monthlyCosts[month]['_kyosai']):(S.settings.kyosai||0);
+        // 今月の掛金（開始月より前なら0）
+        const isBeforeStart=kyosaiStartMonth&&month<kyosaiStartMonth;
+        const thisMonthKyosai=isBeforeStart?0:
+            (S.monthlyCosts[month]?.['_kyosai']!==undefined
+                ?Number(S.monthlyCosts[month]['_kyosai']):(S.settings.kyosai||0));
         const remainM=12-tM3;
         kyosaiAnnual=kyosaiAccum+thisMonthKyosai*remainM;
     }else{
@@ -1817,6 +1863,8 @@ function renderSettings(){
     document.getElementById('set-api-key').value=S.settings.geminiApiKey||'';
     const prevTaxEl=document.getElementById('set-prev-taxable');
     if(prevTaxEl)prevTaxEl.value=S.settings.prevYearTaxable||'';
+    const kyosaiStartEl=document.getElementById('set-kyosai-start');
+    if(kyosaiStartEl)kyosaiStartEl.value=S.settings.kyosaiStartMonth||'';
     // 国保概算表示
     const hlthEl=document.getElementById('hlth-estimate-display');
     if(hlthEl){
@@ -1869,6 +1917,8 @@ function saveSettings(){
     S.settings.geminiApiKey=document.getElementById('set-api-key').value.trim();
     const prevTaxEl=document.getElementById('set-prev-taxable');
     if(prevTaxEl)S.settings.prevYearTaxable=Number(prevTaxEl.value)||0;
+    const kyosaiStartEl=document.getElementById('set-kyosai-start');
+    if(kyosaiStartEl)S.settings.kyosaiStartMonth=kyosaiStartEl.value||'';
     save();runSimulation();renderSettings();
 }
 function renderTools(){const c=document.getElementById('tools-list');c.innerHTML='';S.settings.externalTools.forEach((tool,i)=>{const div=document.createElement('div');div.className='flex flex-col gap-2 bg-slate-50 border p-3 rounded-lg';div.innerHTML=`<div class="flex justify-between items-center gap-2"><input type="text" value="${tool.name}" onchange="updateTool(${i},'name',this.value)" class="flex-1 bg-white border rounded p-1.5 text-sm font-bold" placeholder="ツール名"><button onclick="deleteTool(${i})" class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash text-sm"></i></button></div><div class="flex items-center gap-2"><i class="fas fa-link text-slate-400"></i><input type="text" value="${tool.url}" onchange="updateTool(${i},'url',this.value)" class="flex-1 bg-white border rounded p-1.5 text-xs font-mono" placeholder="https://..."><a href="${tool.url}" target="_blank" class="text-blue-500 hover:text-blue-700 p-1"><i class="fas fa-external-link-alt"></i></a></div>`;c.appendChild(div);});}

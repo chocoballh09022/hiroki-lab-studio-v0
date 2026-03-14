@@ -178,14 +178,14 @@
                     <div>
                         <label class="block text-xs font-bold text-slate-500 mb-1">総売上（発生・請求ベース）</label>
                         <div class="relative"><span class="absolute left-3 top-2.5 text-slate-400">¥</span>
-                        <input type="number" id="dash-revenue" class="w-full bg-slate-50 border rounded-lg py-2 pl-8 pr-3 font-bold disabled:opacity-60 disabled:bg-slate-100" oninput="saveManualInput('rev',this.value)" readonly></div>
+                        <input type="number" id="dash-revenue" class="w-full bg-slate-50 border rounded-lg py-2 pl-8 pr-3 font-bold disabled:opacity-60 disabled:bg-slate-100" onchange="saveManualInput('rev',this.value)" readonly></div>
                         <p id="dash-rev-help" class="text-[10px] text-slate-400 mt-1">※収入管理表の対象月の「請求日(発生日)」から合算</p>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 mb-1">経費合計（按分＋支出管理表）</label>
                         <div class="relative"><span class="absolute left-3 top-2.5 text-slate-400">¥</span>
-                        <input type="number" id="dash-expense" class="w-full bg-slate-50 border rounded-lg py-2 pl-8 pr-3 font-bold disabled:opacity-60 disabled:bg-slate-100" oninput="saveManualInput('exp',this.value)" readonly></div>
-                        <p id="dash-exp-help" class="text-[10px] text-slate-400 mt-1">※按分経費＋支出管理表＋サブスクから合算</p>
+                        <input type="number" id="dash-expense" class="w-full bg-slate-50 border rounded-lg py-2 pl-8 pr-3 font-bold disabled:opacity-60 disabled:bg-slate-100" onchange="saveManualInput('exp',this.value)" readonly></div>
+                        <p id="dash-exp-help" class="text-[10px] text-slate-400 mt-1">空欄のまま = 自動計算値を使用</p>
                     </div>
                     <div class="bg-slate-50 p-3 rounded-xl border">
                         <div class="flex justify-between items-center">
@@ -231,6 +231,7 @@
                     <h4 class="text-[10px] sm:text-xs font-bold text-red-200 uppercase mb-2">毎月確保すべき税金プール</h4>
                     <div class="kpi-number font-extrabold font-mono" id="kpi-tax-pool">¥0</div>
                     <p class="text-[10px] text-red-200 mt-2 bg-red-800/50 inline-block px-2 py-1 rounded">源泉徴収 <span id="kpi-withheld-label">未考慮</span></p>
+                    <p class="text-[9px] text-red-300 mt-2 leading-relaxed">算出: (所得税＋住民税＋事業税＋消費税) ÷ 12<br>※年間の税金合計を毎月積み立てる目安額</p>
                 </div>
                 <div class="bg-white border rounded-2xl p-4 sm:p-5 shadow-sm relative overflow-hidden">
                     <div class="absolute -right-4 -bottom-4 text-emerald-50 opacity-50"><i class="fas fa-gift text-8xl"></i></div>
@@ -1472,47 +1473,55 @@ function runSimulation(){
     let revAccum=0,expAccum=0,revY=0,expY=0,targetMonthNum=1;
     if(month)targetMonthNum=parseInt(month.split('-')[1],10);
 
-    if(mode==='auto'){
-        if(month){
-            const[yStr,mStr]=month.split('-');const year=parseInt(yStr,10);
-            rev=S.incomes.filter(i=>{const d=i.reqDate||i.payDate||'';return d.startsWith(month);}).reduce((s,i)=>s+Number(i.net||i.total||0),0);
-            // C案: 按分は実額を支払、うち経費割合分のみ経費計上
-            let appActual=0,appDeduct=0;
-            S.settings.apportion.forEach(a=>{
-                let v=S.monthlyCosts[month]?.[a.id];if(v===undefined)v=a.defaultAmount;
-                appActual+=Number(v);
-                appDeduct+=Math.floor(Number(v)*(a.ratio/100));
-            });
-            const subT=S.settings.subs.reduce((s,c)=>s+Number(c.amount||0),0);
-            const varE=S.expenses.filter(e=>e.payDate&&e.payDate.startsWith(month)).reduce((s,e)=>s+Number(e.net||e.total||0),0);
-            expActual=appActual+subT+varE;
-            expDeductOnly=appDeduct+subT+varE;
-            exp=expDeductOnly; // 税務上の経費
-            let appTAccum=0,varEAccum=0;
-            for(let mm=1;mm<=targetMonthNum;mm++){
-                const mKey=`${year}-${String(mm).padStart(2,'0')}`;
-                revAccum+=S.incomes.filter(i=>{const d=i.reqDate||i.payDate||'';return d.startsWith(mKey);}).reduce((s,i)=>s+Number(i.net||i.total||0),0);
-                varEAccum+=S.expenses.filter(e=>e.payDate&&e.payDate.startsWith(mKey)).reduce((s,e)=>s+Number(e.net||e.total||0),0);
-                S.settings.apportion.forEach(a=>{let v=S.monthlyCosts[mKey]?.[a.id];if(v===undefined)v=a.defaultAmount;appTAccum+=Math.floor(Number(v)*(a.ratio/100));});
-            }
-            // 按分: 12ヶ月分フル（毎月確定的に発生）
-            // 変動費: 確定分のみ（月平均予測なし）
-            // サブスク: 12ヶ月分フル（毎月確定的に発生）
-            const appTFull=Math.floor(appTAccum/targetMonthNum)*12; // 按分の月平均×12
-            const subTFull=S.settings.subs.reduce((s,c)=>s+Number(c.amount||0),0)*12; // サブスク12ヶ月
-            expAccum=appTAccum+varEAccum+(S.settings.subs.reduce((s,c)=>s+Number(c.amount||0),0))*targetMonthNum;
-            revY=Math.floor((revAccum/targetMonthNum)*12);
-            // expY = 按分(12ヶ月フル) + 変動費(確定分のみ) + サブスク(12ヶ月フル)
-            expY=appTFull+varEAccum+subTFull;
+    // ===== 経費・売上の計算（モード共通で自動計算を先に実行）=====
+    if(month){
+        const[yStr,mStr]=month.split('-');const year=parseInt(yStr,10);
+        // 対象月の売上・経費（自動）
+        const autoRev=S.incomes.filter(i=>{const d=i.reqDate||i.payDate||'';return d.startsWith(month);}).reduce((s,i)=>s+Number(i.net||i.total||0),0);
+        let appActual=0,appDeduct=0;
+        S.settings.apportion.forEach(a=>{
+            let v=S.monthlyCosts[month]?.[a.id];if(v===undefined)v=a.defaultAmount;
+            appActual+=Number(v);appDeduct+=Math.floor(Number(v)*(a.ratio/100));
+        });
+        const subT=S.settings.subs.reduce((s,c)=>s+Number(c.amount||0),0);
+        const varE=S.expenses.filter(e=>e.payDate&&e.payDate.startsWith(month)).reduce((s,e)=>s+Number(e.net||e.total||0),0);
+        const autoExpActual=appActual+subT+varE;
+        const autoExpDeduct=appDeduct+subT+varE;
+
+        // 累計計算
+        let appTAccum=0,varEAccum=0;
+        for(let mm=1;mm<=targetMonthNum;mm++){
+            const mKey=`${year}-${String(mm).padStart(2,'0')}`;
+            revAccum+=S.incomes.filter(i=>{const d=i.reqDate||i.payDate||'';return d.startsWith(mKey);}).reduce((s,i)=>s+Number(i.net||i.total||0),0);
+            varEAccum+=S.expenses.filter(e=>e.payDate&&e.payDate.startsWith(mKey)).reduce((s,e)=>s+Number(e.net||e.total||0),0);
+            S.settings.apportion.forEach(a=>{let v=S.monthlyCosts[mKey]?.[a.id];if(v===undefined)v=a.defaultAmount;appTAccum+=Math.floor(Number(v)*(a.ratio/100));});
         }
-    }else{
-        // 手動モード：月別保存値があれば使う、なければ入力欄の現在値
-        const savedRev=month&&S.monthlyCosts[month]?.['_manual_rev'];
-        const savedExp=month&&S.monthlyCosts[month]?.['_manual_exp'];
-        rev=savedRev!==undefined?savedRev:(Number(document.getElementById('dash-revenue').value)||0);
-        exp=savedExp!==undefined?savedExp:(Number(document.getElementById('dash-expense').value)||0);
-        expActual=exp;expDeductOnly=exp;
-        revAccum=rev*targetMonthNum;expAccum=exp*targetMonthNum;revY=rev*12;expY=exp*12;
+        const appTFull=Math.floor(appTAccum/targetMonthNum)*12;
+        const subTFull=subT*12;
+        expAccum=appTAccum+varEAccum+subT*targetMonthNum;
+
+        if(mode==='auto'){
+            rev=autoRev;
+            expActual=autoExpActual;expDeductOnly=autoExpDeduct;exp=autoExpDeduct;
+            revY=Math.floor((revAccum/targetMonthNum)*12);
+            // 按分(月平均×12) + 変動費(確定分のみ) + サブスク(12ヶ月)
+            expY=appTFull+varEAccum+subTFull;
+        }else{
+            // 手動モード：売上は保存値or自動。経費は保存値がなければ自動を使う
+            const savedRev=S.monthlyCosts[month]?.['_manual_rev'];
+            const savedExp=S.monthlyCosts[month]?.['_manual_exp'];
+            rev=savedRev!==undefined?Number(savedRev):autoRev;
+            if(savedExp!==undefined){
+                exp=Number(savedExp);expActual=Number(savedExp);expDeductOnly=Number(savedExp);
+                revY=rev*12;expY=exp*12;
+            }else{
+                // 経費は自動計算をそのまま使う
+                expActual=autoExpActual;expDeductOnly=autoExpDeduct;exp=autoExpDeduct;
+                revY=rev*12;
+                expY=appTFull+varEAccum+subTFull;
+            }
+            revAccum=rev*targetMonthNum;
+        }
     }
     document.getElementById('dash-revenue').value=rev;
     document.getElementById('dash-expense').value=expDeductOnly;
@@ -1525,22 +1534,25 @@ function runSimulation(){
 
     const accM=document.getElementById('fc-accum-months');if(accM)accM.textContent=targetMonthNum;
     const accR=document.getElementById('fc-accum-revenue');if(accR)accR.textContent=fmt(revAccum);
-    const accE=document.getElementById('fc-accum-expense');if(accE)accE.textContent=fmt(expAccum);
-    // 実支払ベースの累計経費
+    // ⑥ 税務経費の表示: 按分(12ヶ月フル) + 変動費(確定分) + サブスク(12ヶ月) = expY
+    const accE=document.getElementById('fc-accum-expense');if(accE)accE.textContent=fmt(expY);
+    // 実支払ベースの累計経費（キャッシュベース: 按分は実額12ヶ月フル + 変動費確定分）
     let expAccumCash=expAccum;
-    if(mode==='auto'&&month){
+    if(month){
         const[yStr2]=month.split('-');const year2=parseInt(yStr2,10);
-        let apCashAccum=0;
+        let apCashFull=0,apCashAccum=0;
         for(let mm=1;mm<=targetMonthNum;mm++){
             const mKey=`${year2}-${String(mm).padStart(2,'0')}`;
             S.settings.apportion.forEach(a=>{let v=S.monthlyCosts[mKey]?.[a.id];if(v===undefined)v=a.defaultAmount;apCashAccum+=Number(v);});
         }
+        apCashFull=Math.floor(apCashAccum/targetMonthNum)*12;
         const varEAcc2=S.expenses.filter(e=>{const d=e.payDate||'';return d.startsWith(String(year2));}).reduce((s,e)=>s+Number(e.net||e.total||0),0);
-        expAccumCash=apCashAccum+varEAcc2+(S.settings.subs.reduce((s,c)=>s+Number(c.amount||0),0))*targetMonthNum;
+        const subTFull2=S.settings.subs.reduce((s,c)=>s+Number(c.amount||0),0)*12;
+        expAccumCash=apCashFull+varEAcc2+subTFull2;
     }
     const accECash=document.getElementById('fc-accum-expense-cash');if(accECash)accECash.textContent=fmt(expAccumCash);
 
-    // 今後予測内訳表示（累計実績 ＋ 月平均×残月）
+    // 今後予測内訳表示
     const remainMonths=Math.max(0,12-targetMonthNum);
     const monthlyAvg=targetMonthNum>0?Math.floor(revAccum/targetMonthNum):0;
     const predictedRev=monthlyAvg*remainMonths;
@@ -1550,8 +1562,8 @@ function runSimulation(){
 
     const lbl=document.getElementById('fc-logic-label');
     if(lbl)lbl.textContent=mode==='auto'
-        ?`売上: 月平均×12予測 ／ 経費: ${targetMonthNum}ヶ月確定分のみ（保守的）`
-        :'入力値×12で算出';
+        ?`売上: 月平均×12 ／ 経費: 按分12ヶ月＋変動費${targetMonthNum}ヶ月確定`
+        :'手動入力（経費未入力=自動計算）';
     const cl=document.getElementById('chart-accum-label');if(cl)cl.textContent=targetMonthNum;
     const cl2=document.getElementById('chart-accum-label2');if(cl2)cl2.textContent=targetMonthNum;
 

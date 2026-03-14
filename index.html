@@ -1641,7 +1641,7 @@ function runSimulation(){
     );
 
     // ===== 税率ブラケットシミュレーター =====
-    updateBracketSimulator(taxable,it,biz,ded,ky,id2,hlth,revY,expY);
+    updateBracketSimulator(taxable,it,biz,ded,ky,id2,hlth,revY,expY,targetMonthNum);
 }
 
 function calcIT(tx){
@@ -1662,7 +1662,7 @@ function getBracket(tx){
     if(tx<=18000000)return{rate:33,limit:18000000,prevLimit:9000000};
     return{rate:40,limit:Infinity,prevLimit:18000000};
 }
-function updateBracketSimulator(taxable,it,biz,ded,ky,id2,hlth,revY,expY){
+function updateBracketSimulator(taxable,it,biz,ded,ky,id2,hlth,revY,expY,targetMonthNum){
     // 追加控除を取得
     const extraDed=(Number(document.getElementById('sim-life-ins')?.value)||0)
         +(Number(document.getElementById('sim-quake-ins')?.value)||0)

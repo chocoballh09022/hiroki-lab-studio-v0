@@ -255,26 +255,44 @@
             <div class="bg-white rounded-2xl shadow-sm border p-5">
                 <h3 class="font-bold text-slate-800 border-b pb-3 mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                     <span class="text-sm sm:text-base"><i class="fas fa-chart-line text-purple-500 mr-2"></i>本年実績 ＆ 年間着地予測</span>
-                    <span class="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded w-fit" id="fc-logic-label">1〜○月までの平均×12で算出</span>
+                    <span class="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded w-fit" id="fc-logic-label">累計実績＋月平均×残月で算出</span>
                 </h3>
                 <div class="space-y-4">
-                    <!-- Cumulative -->
-                    <div class="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                        <div>
-                            <p class="text-[10px] font-bold text-slate-500 mb-1">累計売上(<span id="fc-accum-months">1</span>ヶ月)</p>
-                            <p class="font-mono text-lg sm:text-2xl font-bold text-slate-800 truncate" id="fc-accum-revenue">¥0</p>
+                    <!-- 確定分＋予測内訳 -->
+                    <div class="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                        <div class="grid grid-cols-2 divide-x divide-slate-200">
+                            <div class="p-3">
+                                <p class="text-[10px] font-bold text-slate-500 mb-1">✅ 累計実績（<span id="fc-accum-months">1</span>ヶ月分）</p>
+                                <p class="font-mono text-base sm:text-xl font-bold text-slate-800 truncate" id="fc-accum-revenue">¥0</p>
+                            </div>
+                            <div class="p-3">
+                                <p class="text-[10px] font-bold text-blue-500 mb-1">🔮 今後予測（残<span id="fc-remain-months">?</span>ヶ月）</p>
+                                <p class="font-mono text-base sm:text-xl font-bold text-blue-600 truncate" id="fc-predicted-revenue">¥0</p>
+                                <p class="text-[9px] text-slate-400 mt-0.5">月平均 <span id="fc-monthly-avg">¥0</span> × 残月</p>
+                            </div>
                         </div>
-                        <div>
-                            <p class="text-[10px] font-bold text-blue-600 mb-0.5">累計経費（税務計上）</p>
-                            <p class="font-mono text-lg sm:text-xl font-bold text-slate-800 truncate" id="fc-accum-expense">¥0</p>
-                            <p class="text-[10px] font-bold text-amber-600 mt-1 mb-0.5">累計経費（実支払）</p>
-                            <p class="font-mono text-base font-bold text-amber-700 truncate" id="fc-accum-expense-cash">¥0</p>
+                        <div class="bg-white border-t border-slate-200 px-3 py-2 flex justify-between items-center">
+                            <p class="text-xs font-bold text-purple-700">年間着地予測（合計）</p>
+                            <p class="font-mono font-extrabold text-purple-700 text-base sm:text-lg" id="fc-revenue">¥0</p>
+                        </div>
+                    </div>
+                    <!-- 経費内訳 -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="p-3 bg-blue-50 rounded-xl border border-blue-100">
+                            <p class="text-[10px] font-bold text-blue-600 mb-1">経費（税務計上）</p>
+                            <p class="font-mono text-sm font-bold text-slate-800" id="fc-accum-expense">¥0</p>
+                            <p class="text-[9px] text-blue-400 mt-0.5">按分後・確定申告ベース</p>
+                        </div>
+                        <div class="p-3 bg-amber-50 rounded-xl border border-amber-100">
+                            <p class="text-[10px] font-bold text-amber-600 mb-1">経費（実支払）</p>
+                            <p class="font-mono text-sm font-bold text-amber-700" id="fc-accum-expense-cash">¥0</p>
+                            <p class="text-[9px] text-amber-400 mt-0.5">固定費全額・生活実態ベース</p>
                         </div>
                     </div>
                     <!-- Bar chart with amounts -->
                     <div>
                         <div class="flex justify-between text-xs font-bold text-slate-600 mb-1">
-                            <span>予測ベースの年間売上</span><span class="font-mono text-sm" id="fc-revenue">¥0</span>
+                            <span>予測ベースの年間売上</span><span class="font-mono text-sm" id="fc-revenue-bar">¥0</span>
                         </div>
                         <div class="w-full bg-slate-100 rounded-full h-4 overflow-hidden flex">
                             <div class="bg-blue-400 h-4 rounded-l-full transition-all duration-500" id="bar-income" style="width:50%"></div>
@@ -329,6 +347,29 @@
                             所得税率ブラケット シミュレーター
                             <span class="text-[10px] bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded font-normal">節税プランニング</span>
                         </h4>
+
+                        <!-- 所得税率表 -->
+                        <div class="mb-4">
+                            <p class="text-[10px] text-slate-400 font-bold mb-2"><i class="fas fa-table mr-1"></i>所得税率表（★ = 現在地）</p>
+                            <div class="rounded-xl overflow-hidden border border-white/10">
+                                <table class="w-full text-xs">
+                                    <thead><tr class="bg-white/10 text-slate-400 text-[10px]">
+                                        <th class="px-3 py-2 text-left font-bold">課税所得</th>
+                                        <th class="px-3 py-2 text-center font-bold">税率</th>
+                                        <th class="px-3 py-2 text-right font-bold">控除額</th>
+                                    </tr></thead>
+                                    <tbody id="bracket-table-body" class="divide-y divide-white/5">
+                                        <tr class="bracket-row" data-rate="5"><td class="px-3 py-2 text-slate-300">195万円以下</td><td class="px-3 py-2 text-center font-bold">5%</td><td class="px-3 py-2 text-right text-slate-400">—</td></tr>
+                                        <tr class="bracket-row" data-rate="10"><td class="px-3 py-2 text-slate-300">195万〜330万</td><td class="px-3 py-2 text-center font-bold">10%</td><td class="px-3 py-2 text-right text-slate-400">97,500</td></tr>
+                                        <tr class="bracket-row" data-rate="20"><td class="px-3 py-2 text-slate-300">330万〜695万</td><td class="px-3 py-2 text-center font-bold">20%</td><td class="px-3 py-2 text-right text-slate-400">427,500</td></tr>
+                                        <tr class="bracket-row" data-rate="23"><td class="px-3 py-2 text-slate-300">695万〜900万</td><td class="px-3 py-2 text-center font-bold">23%</td><td class="px-3 py-2 text-right text-slate-400">636,000</td></tr>
+                                        <tr class="bracket-row" data-rate="33"><td class="px-3 py-2 text-slate-300">900万〜1,800万</td><td class="px-3 py-2 text-center font-bold">33%</td><td class="px-3 py-2 text-right text-slate-400">1,536,000</td></tr>
+                                        <tr class="bracket-row" data-rate="40"><td class="px-3 py-2 text-slate-300">1,800万超</td><td class="px-3 py-2 text-center font-bold">40%</td><td class="px-3 py-2 text-right text-slate-400">2,796,000</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
                         <!-- 現在の税率 -->
                         <div class="bg-white/10 rounded-xl p-3 mb-3">
                             <div class="flex items-center justify-between flex-wrap gap-2">
@@ -376,6 +417,19 @@
                         <div id="sim-lowest-bracket" class="hidden bg-blue-900/40 border border-blue-400/30 rounded-xl p-3 mb-3 text-center">
                             <p class="text-[11px] text-blue-300 font-bold"><i class="fas fa-check-circle mr-1 text-emerald-400"></i>最低税率（5%）です！これ以上の税率引き下げはできません</p>
                         </div>
+
+                        <!-- 控除内訳 -->
+                        <div class="bg-white/5 rounded-xl p-3 mb-3 border border-white/10">
+                            <p class="text-[10px] text-slate-400 font-bold mb-2"><i class="fas fa-calculator text-slate-400 mr-1"></i>課税所得の計算内訳</p>
+                            <div class="space-y-1 text-xs font-mono" id="sim-deduction-breakdown">
+                                <!-- JSで動的生成 -->
+                            </div>
+                            <div class="mt-2 pt-2 border-t border-white/10 flex justify-between items-center">
+                                <span class="text-[10px] text-yellow-300 font-bold">＝ 課税所得</span>
+                                <span class="font-mono font-extrabold text-yellow-300" id="sim-taxable-final">¥0</span>
+                            </div>
+                        </div>
+
                         <!-- 追加控除入力欄 -->
                         <div class="border-t border-white/10 pt-3">
                             <p class="text-[10px] text-slate-400 font-bold mb-2"><i class="fas fa-plus-circle text-slate-400 mr-1"></i>追加控除（任意入力）</p>
@@ -418,33 +472,43 @@
 
             <!-- Pie Charts -->
             <div class="bg-white rounded-2xl shadow-sm border p-5">
-                <h3 class="font-bold text-slate-800 border-b pb-3 mb-4 text-sm"><i class="fas fa-chart-pie text-indigo-500 mr-2"></i>収支内訳チャート</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 chart-grid-2col gap-4 mb-4">
-                    <div class="bg-blue-50 rounded-xl p-4 chart-block border border-blue-100">
+                <div class="flex items-center justify-between border-b pb-3 mb-4">
+                    <h3 class="font-bold text-slate-800 text-sm"><i class="fas fa-chart-pie text-indigo-500 mr-2"></i>収支内訳チャート</h3>
+                    <div class="flex bg-slate-100 rounded-lg p-1 gap-1">
+                        <button id="chart-tab-tax" onclick="switchChartTab('tax')" class="px-3 py-1.5 text-xs font-bold rounded-md bg-white text-blue-700 shadow-sm transition-all">📊 税務</button>
+                        <button id="chart-tab-cash" onclick="switchChartTab('cash')" class="px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700 transition-all">💰 実態</button>
+                    </div>
+                </div>
+                <!-- 税務ベース -->
+                <div id="chart-panel-tax">
+                    <div class="bg-blue-50 rounded-xl p-3 border border-blue-100 mb-3">
                         <p class="text-[11px] font-bold text-blue-700 text-center mb-0.5">📊 税務ベース（確定申告用）</p>
                         <p class="text-[9px] text-blue-400 text-center mb-3">経費＝按分後の経費計上額</p>
-                        <div class="grid grid-cols-2 chart-inner-grid gap-3">
+                        <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <p class="text-[9px] font-bold text-slate-500 text-center mb-2">対象月</p>
-                                <div class="chart-container"><canvas id="chart-monthly-tax"></canvas></div>
+                                <p class="text-[10px] font-bold text-slate-500 text-center mb-2">対象月</p>
+                                <div style="max-width:200px;margin:0 auto"><canvas id="chart-monthly-tax"></canvas></div>
                             </div>
                             <div>
-                                <p class="text-[9px] font-bold text-slate-500 text-center mb-2">累計(1〜<span id="chart-accum-label">?</span>月)</p>
-                                <div class="chart-container"><canvas id="chart-cumulative-tax"></canvas></div>
+                                <p class="text-[10px] font-bold text-slate-500 text-center mb-2">累計(1〜<span id="chart-accum-label">?</span>月)</p>
+                                <div style="max-width:200px;margin:0 auto"><canvas id="chart-cumulative-tax"></canvas></div>
                             </div>
                         </div>
                     </div>
-                    <div class="bg-amber-50 rounded-xl p-4 chart-block border border-amber-100">
+                </div>
+                <!-- キャッシュベース -->
+                <div id="chart-panel-cash" class="hidden">
+                    <div class="bg-amber-50 rounded-xl p-3 border border-amber-100 mb-3">
                         <p class="text-[11px] font-bold text-amber-700 text-center mb-0.5">💰 キャッシュベース（生活実態）</p>
                         <p class="text-[9px] text-amber-400 text-center mb-3">経費＝固定費の実際の支払総額</p>
-                        <div class="grid grid-cols-2 chart-inner-grid gap-3">
+                        <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <p class="text-[9px] font-bold text-slate-500 text-center mb-2">対象月</p>
-                                <div class="chart-container"><canvas id="chart-monthly-cash"></canvas></div>
+                                <p class="text-[10px] font-bold text-slate-500 text-center mb-2">対象月</p>
+                                <div style="max-width:200px;margin:0 auto"><canvas id="chart-monthly-cash"></canvas></div>
                             </div>
                             <div>
-                                <p class="text-[9px] font-bold text-slate-500 text-center mb-2">累計(1〜<span id="chart-accum-label2">?</span>月)</p>
-                                <div class="chart-container"><canvas id="chart-cumulative-cash"></canvas></div>
+                                <p class="text-[10px] font-bold text-slate-500 text-center mb-2">累計(1〜<span id="chart-accum-label2">?</span>月)</p>
+                                <div style="max-width:200px;margin:0 auto"><canvas id="chart-cumulative-cash"></canvas></div>
                             </div>
                         </div>
                     </div>
@@ -1145,6 +1209,21 @@ function switchTab(id){
     if(window.innerWidth<768)toggleSidebar();
     if(id==='dashboard')runSimulation();
 }
+function switchChartTab(tab){
+    const taxPanel=document.getElementById('chart-panel-tax');
+    const cashPanel=document.getElementById('chart-panel-cash');
+    const taxBtn=document.getElementById('chart-tab-tax');
+    const cashBtn=document.getElementById('chart-tab-cash');
+    const on='px-3 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm transition-all';
+    const off='px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700 transition-all';
+    if(tab==='tax'){
+        taxPanel.classList.remove('hidden');cashPanel.classList.add('hidden');
+        taxBtn.className=on+' text-blue-700';cashBtn.className=off;
+    }else{
+        cashPanel.classList.remove('hidden');taxPanel.classList.add('hidden');
+        cashBtn.className=on+' text-amber-700';taxBtn.className=off;
+    }
+}
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('-translate-x-full');document.getElementById('mobile-overlay').classList.toggle('hidden');}
 function fmt(n){return new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(n||0);}
 function changeDashMonth(d){const el=document.getElementById('dash-month');if(!el.value)return;const[y,m]=el.value.split('-');const nd=new Date(+y,+m-1+d,1);el.value=`${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}`;dashMonthChanged();}
@@ -1297,8 +1376,17 @@ function runSimulation(){
         expAccumCash=apCashAccum+varEAcc2+(S.settings.subs.reduce((s,c)=>s+Number(c.amount||0),0))*targetMonthNum;
     }
     const accECash=document.getElementById('fc-accum-expense-cash');if(accECash)accECash.textContent=fmt(expAccumCash);
+
+    // 今後予測内訳表示（累計実績 ＋ 月平均×残月）
+    const remainMonths=Math.max(0,12-targetMonthNum);
+    const monthlyAvg=targetMonthNum>0?Math.floor(revAccum/targetMonthNum):0;
+    const predictedRev=monthlyAvg*remainMonths;
+    const rmEl=document.getElementById('fc-remain-months');if(rmEl)rmEl.textContent=remainMonths;
+    const prEl=document.getElementById('fc-predicted-revenue');if(prEl)prEl.textContent=fmt(predictedRev);
+    const maEl=document.getElementById('fc-monthly-avg');if(maEl)maEl.textContent=fmt(monthlyAvg);
+
     const lbl=document.getElementById('fc-logic-label');
-    if(lbl)lbl.textContent=mode==='auto'?`1〜${targetMonthNum}月までの平均×12で算出`:'入力値×12で算出';
+    if(lbl)lbl.textContent=mode==='auto'?`累計実績(${targetMonthNum}ヶ月) ＋ 月平均×残${remainMonths}ヶ月`:'入力値×12で算出';
     const cl=document.getElementById('chart-accum-label');if(cl)cl.textContent=targetMonthNum;
     const cl2=document.getElementById('chart-accum-label2');if(cl2)cl2.textContent=targetMonthNum;
 
@@ -1334,6 +1422,7 @@ function runSimulation(){
     document.getElementById('kpi-furusato-remaining').textContent=fmt(furRemain);
     document.getElementById('kpi-withheld-label').textContent=wh?'考慮済':'未考慮';
     const fcRevEl=document.getElementById('fc-revenue');if(fcRevEl)fcRevEl.textContent=fmt(revY);
+    const fcRevBar=document.getElementById('fc-revenue-bar');if(fcRevBar)fcRevBar.textContent=fmt(revY);
     document.getElementById('fc-income-tax').textContent=fmt(remIt);
     document.getElementById('fc-resident-tax').textContent=fmt(res);
     document.getElementById('fc-enterprise-tax').textContent=fmt(ent);
@@ -1387,7 +1476,7 @@ function runSimulation(){
     );
 
     // ===== 税率ブラケットシミュレーター =====
-    updateBracketSimulator(taxable,it,biz,ded,ky,id2,hlth);
+    updateBracketSimulator(taxable,it,biz,ded,ky,id2,hlth,revY,expY);
 }
 
 function calcIT(tx){
@@ -1408,7 +1497,7 @@ function getBracket(tx){
     if(tx<=18000000)return{rate:33,limit:18000000,prevLimit:9000000};
     return{rate:40,limit:Infinity,prevLimit:18000000};
 }
-function updateBracketSimulator(taxable,it,biz,ded,ky,id2,hlth){
+function updateBracketSimulator(taxable,it,biz,ded,ky,id2,hlth,revY,expY){
     // 追加控除を取得
     const extraDed=(Number(document.getElementById('sim-life-ins')?.value)||0)
         +(Number(document.getElementById('sim-quake-ins')?.value)||0)
@@ -1439,8 +1528,88 @@ function updateBracketSimulator(taxable,it,biz,ded,ky,id2,hlth){
     simRateNow.textContent=`${bracket.rate}%`;
     simITNow.textContent=fmt(adjIT);
 
+    // ===== 控除内訳表示 =====
+    const breakdown=document.getElementById('sim-deduction-breakdown');
+    const simTaxableFinal=document.getElementById('sim-taxable-final');
+    if(breakdown){
+        const tp=S.settings.taxProfile||{};
+        const dedMap={blue65:650000,blue55:550000,blue10:100000,white:0};
+        const dedLabel={blue65:'青色申告特別控除（65万）',blue55:'青色申告特別控除（55万）',blue10:'青色申告特別控除（10万）',white:'青色申告控除なし（白色）'};
+        const filingDed=dedMap[tp.filingType||'blue65'];
+        const basicDed=480000;
+        const kyosaiY=(S.settings.kyosai||0)*12;
+        const idecoY=(S.settings.ideco||0)*12;
+
+        const rows=[];
+        // 年間売上（予測）
+        rows.push({label:'年間売上（予測）',value:revY||0,sign:'+'});
+        rows.push({label:'─',value:null,sign:'─'});
+        // 経費
+        rows.push({label:'経費合計（税務計上）',value:expY||0,sign:'-'});
+        rows.push({label:dedLabel[tp.filingType||'blue65'],value:filingDed,sign:'-'});
+        rows.push({label:'基礎控除',value:basicDed,sign:'-'});
+        rows.push({label:'国民年金（概算）',value:203760,sign:'-'});
+        // 健康保険（hlthの概算）
+        rows.push({label:'国民健康保険（概算）',value:hlth||0,sign:'-'});
+        if(kyosaiY>0)rows.push({label:'小規模企業共済',value:kyosaiY,sign:'-'});
+        if(idecoY>0)rows.push({label:'iDeCo',value:idecoY,sign:'-'});
+        // 追加控除
+        const lifeIns=Number(document.getElementById('sim-life-ins')?.value)||0;
+        const quakeIns=Number(document.getElementById('sim-quake-ins')?.value)||0;
+        const medical=Number(document.getElementById('sim-medical')?.value)||0;
+        const spouse=Number(document.getElementById('sim-spouse')?.value)||0;
+        const dependent=Number(document.getElementById('sim-dependent')?.value)||0;
+        const otherDed=Number(document.getElementById('sim-other-ded')?.value)||0;
+        if(lifeIns>0)rows.push({label:'生命保険料控除',value:lifeIns,sign:'-'});
+        if(quakeIns>0)rows.push({label:'地震保険料控除',value:quakeIns,sign:'-'});
+        if(medical>0)rows.push({label:'医療費控除',value:medical,sign:'-'});
+        if(spouse>0)rows.push({label:'配偶者控除',value:spouse,sign:'-'});
+        if(dependent>0)rows.push({label:'扶養控除',value:dependent,sign:'-'});
+        if(otherDed>0)rows.push({label:'その他控除',value:otherDed,sign:'-'});
+
+        breakdown.innerHTML=rows.map(r=>{
+            if(r.sign==='─')return`<div class="border-t border-white/10 my-1"></div>`;
+            const color=r.sign==='-'?'text-red-300':'text-white';
+            const prefix=r.sign==='-'?'－ ':'　 ';
+            return`<div class="flex justify-between items-center py-0.5 gap-2">
+                <span class="text-slate-300 text-[10px] truncate">${prefix}${r.label}</span>
+                <span class="${color} shrink-0">${r.sign==='-'?'▲':''} ${fmt(r.value)}</span>
+            </div>`;
+        }).join('');
+        if(simTaxableFinal)simTaxableFinal.textContent=fmt(adjTaxable);
+    }
+
+    // ===== 税率表のハイライト =====
+    const rateRowColors={
+        5:'bg-blue-900/60 text-white',
+        10:'bg-green-900/60 text-white',
+        20:'bg-yellow-900/60 text-white',
+        23:'bg-orange-900/60 text-white',
+        33:'bg-red-900/60 text-white',
+        40:'bg-red-950/80 text-white'
+    };
+    document.querySelectorAll('.bracket-row').forEach(row=>{
+        const r=parseInt(row.dataset.rate);
+        const isCurrentBracket=(r===bracket.rate);
+        if(isCurrentBracket){
+            row.className=`bracket-row ${rateRowColors[r]||'bg-yellow-900/60 text-white'}`;
+            // 既存の★を削除してから追加
+            const cells=row.querySelectorAll('td');
+            if(cells[1]&&!cells[1].textContent.includes('★')){
+                cells[1].innerHTML=`<span class="font-extrabold text-yellow-300">★ ${r}%</span>`;
+            }
+            // 矢印行を挿入
+            row.setAttribute('data-active','1');
+        }else{
+            row.className='bracket-row hover:bg-white/5 transition-colors';
+            const cells=row.querySelectorAll('td');
+            if(cells[1])cells[1].innerHTML=`<span class="font-bold">${r}%</span>`;
+            row.removeAttribute('data-active');
+        }
+    });
+
     // ブラケット内の進捗バー
-    const rangeSize=bracket.limit===Infinity?adjTaxable-bracket.prevLimit:bracket.limit-bracket.prevLimit;
+    const rangeSize=bracket.limit===Infinity?Math.max(1,adjTaxable-bracket.prevLimit):bracket.limit-bracket.prevLimit;
     const posInRange=adjTaxable-bracket.prevLimit;
     const pct=Math.min(100,Math.max(2,(posInRange/rangeSize)*100));
     simBracketBar.style.width=`${pct}%`;
@@ -1456,16 +1625,13 @@ function updateBracketSimulator(taxable,it,biz,ded,ky,id2,hlth){
     }else{
         simLowest.classList.add('hidden');
         simNextBracket.classList.remove('hidden');
-        // 1段階下のブラケット
         const prevBrackets=[
             {rate:5,limit:1950000},{rate:10,limit:3300000},{rate:20,limit:6950000},
             {rate:23,limit:9000000},{rate:33,limit:18000000}
         ];
         const lowerB=prevBrackets.filter(b=>b.rate<bracket.rate).sort((a,b)=>b.rate-a.rate)[0];
-        const targetTaxable=lowerB.limit; // 課税所得をこれ以下にする
-        // 必要な追加経費 = 現在の課税所得 - 目標課税所得
+        const targetTaxable=lowerB.limit;
         const neededExpense=Math.max(0,adjTaxable-targetTaxable);
-        // 節税効果 = 現在の所得税 - 目標所得税
         const targetIT=calcIT(targetTaxable);
         const saving=Math.max(0,adjIT-targetIT);
         simRateNext.textContent=`${lowerB.rate}%`;

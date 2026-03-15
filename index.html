@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -62,7 +61,6 @@
 <body class="h-screen flex overflow-hidden text-slate-800">
 
 <!-- ===== SIDEBAR ===== -->
-
 <aside id="sidebar" class="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-20 flex-shrink-0 transition-transform duration-300 md:translate-x-0 -translate-x-full fixed md:relative h-full">
     <div class="p-6 border-b border-slate-800">
         <h1 class="text-xl font-bold text-white flex items-center leading-tight">
@@ -97,7 +95,6 @@
 </aside>
 
 <!-- Mobile Header -->
-
 <div class="md:hidden fixed top-0 w-full bg-slate-900 text-white p-4 flex justify-between items-center z-10 shadow-md">
     <h1 class="font-bold"><i class="fas fa-layer-group text-blue-500 mr-2"></i>CR ERP</h1>
     <button onclick="toggleSidebar()" class="text-white"><i class="fas fa-bars text-xl"></i></button>
@@ -105,932 +102,957 @@
 <div id="mobile-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-10 hidden md:hidden"></div>
 
 <!-- ===== MAIN ===== -->
-
 <main class="flex-1 overflow-y-auto pt-16 md:pt-0" id="main-content">
 <div class="p-3 sm:p-6 md:p-10 max-w-7xl mx-auto">
 
-```
-<!-- Top Bar -->
-<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-slate-200 gap-3">
-    <div class="text-[10px] sm:text-xs font-bold text-slate-500 bg-white px-3 py-1.5 rounded border border-slate-200 shadow-sm flex items-center shrink-0">
-        <i class="fas fa-user-circle mr-2 text-blue-500"></i><span id="profile-badge">CD / インボイス2割特例 / 青色65万</span>
-    </div>
-    <div class="flex items-center justify-between w-full sm:w-auto flex-wrap gap-3">
-        <div class="flex items-center gap-2 flex-wrap">
-            <button onclick="gotoApiSettings()" class="text-[10px] sm:text-xs bg-slate-800 hover:bg-slate-700 text-white px-2 sm:px-3 py-1.5 rounded shadow-sm font-bold flex items-center transition-colors">
-                <i class="fas fa-key text-yellow-400 mr-1"></i>API設定
-            </button>
-            <button onclick="downloadPage('png')" class="text-[10px] sm:text-xs bg-white hover:bg-slate-50 text-slate-700 px-2 sm:px-3 py-1.5 rounded border border-slate-300 shadow-sm font-bold flex items-center">
-                <i class="fas fa-image text-blue-500 mr-1"></i>PNG
-            </button>
-            <button onclick="downloadPage('pdf')" class="text-[10px] sm:text-xs bg-white hover:bg-slate-50 text-slate-700 px-2 sm:px-3 py-1.5 rounded border border-slate-300 shadow-sm font-bold flex items-center">
-                <i class="fas fa-file-pdf text-red-500 mr-1"></i>PDF
-            </button>
+    <!-- Top Bar -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-slate-200 gap-3">
+        <div class="text-[10px] sm:text-xs font-bold text-slate-500 bg-white px-3 py-1.5 rounded border border-slate-200 shadow-sm flex items-center shrink-0">
+            <i class="fas fa-user-circle mr-2 text-blue-500"></i><span id="profile-badge">CD / インボイス2割特例 / 青色65万</span>
         </div>
-        <div class="flex flex-col items-end">
-            <div class="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-emerald-600">
-                <i id="sync-icon" class="fas fa-hdd"></i><span id="sync-text">ローカル保存モード</span>
+        <div class="flex items-center justify-between w-full sm:w-auto flex-wrap gap-3">
+            <div class="flex items-center gap-2 flex-wrap">
+                <button onclick="gotoApiSettings()" class="text-[10px] sm:text-xs bg-slate-800 hover:bg-slate-700 text-white px-2 sm:px-3 py-1.5 rounded shadow-sm font-bold flex items-center transition-colors">
+                    <i class="fas fa-key text-yellow-400 mr-1"></i>API設定
+                </button>
+                <button onclick="downloadPage('png')" class="text-[10px] sm:text-xs bg-white hover:bg-slate-50 text-slate-700 px-2 sm:px-3 py-1.5 rounded border border-slate-300 shadow-sm font-bold flex items-center">
+                    <i class="fas fa-image text-blue-500 mr-1"></i>PNG
+                </button>
+                <button onclick="downloadPage('pdf')" class="text-[10px] sm:text-xs bg-white hover:bg-slate-50 text-slate-700 px-2 sm:px-3 py-1.5 rounded border border-slate-300 shadow-sm font-bold flex items-center">
+                    <i class="fas fa-file-pdf text-red-500 mr-1"></i>PDF
+                </button>
             </div>
-            <div id="last-updated-label" class="text-[9px] text-slate-400 mt-0.5">最終更新: --</div>
+            <div class="flex flex-col items-end">
+                <div class="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-emerald-600">
+                    <i id="sync-icon" class="fas fa-hdd"></i><span id="sync-text">ローカル保存モード</span>
+                </div>
+                <div id="last-updated-label" class="text-[9px] text-slate-400 mt-0.5">最終更新: --</div>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- ==================== DASHBOARD ==================== -->
-<div id="tab-dashboard" class="tab-content active">
+    <!-- ==================== DASHBOARD ==================== -->
+    <div id="tab-dashboard" class="tab-content active">
 
-    <!-- 国保更新通知バナー -->
-    <div id="hlth-notify-banner" class="hidden mb-4 bg-sky-50 border border-sky-200 rounded-2xl p-4 flex items-start justify-between gap-3">
-        <div class="flex items-start gap-3">
-            <i class="fas fa-hospital text-sky-500 text-xl mt-0.5 shrink-0"></i>
+        <!-- 国保更新通知バナー -->
+        <div id="hlth-notify-banner" class="hidden mb-4 bg-sky-50 border border-sky-200 rounded-2xl p-4 flex items-start justify-between gap-3">
+            <div class="flex items-start gap-3">
+                <i class="fas fa-hospital text-sky-500 text-xl mt-0.5 shrink-0"></i>
+                <div>
+                    <p class="text-sm font-bold text-sky-800">そろそろ国保の通知書が届く時期です</p>
+                    <p class="text-xs text-sky-600 mt-0.5">通知書が届いたら、設定タブ「国民健康保険の計算設定」で<strong>前年の課税所得</strong>を更新してください。より正確な税金シミュレーションができます。</p>
+                    <button onclick="switchTab('settings');setTimeout(()=>document.querySelector('#tab-settings').scrollTop=0,200)" class="mt-2 text-xs bg-sky-600 text-white px-3 py-1.5 rounded font-bold hover:bg-sky-700"><i class="fas fa-cog mr-1"></i>設定タブへ</button>
+                </div>
+            </div>
+            <button onclick="dismissHlthNotify()" class="text-sky-400 hover:text-sky-600 shrink-0 p-1"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4 border-b pb-4">
             <div>
-                <p class="text-sm font-bold text-sky-800">そろそろ国保の通知書が届く時期です</p>
-                <p class="text-xs text-sky-600 mt-0.5">通知書が届いたら、設定タブ「国民健康保険の計算設定」で<strong>前年の課税所得</strong>を更新してください。より正確な税金シミュレーションができます。</p>
-                <button onclick="switchTab('settings');setTimeout(()=>document.querySelector('#tab-settings').scrollTop=0,200)" class="mt-2 text-xs bg-sky-600 text-white px-3 py-1.5 rounded font-bold hover:bg-sky-700"><i class="fas fa-cog mr-1"></i>設定タブへ</button>
+                <h2 class="text-xl sm:text-3xl font-bold text-slate-800">Financial Dashboard</h2>
+                <p class="text-xs sm:text-sm text-slate-500 mt-1">手取りの最大化と、安全な資金振り分け</p>
             </div>
-        </div>
-        <button onclick="dismissHlthNotify()" class="text-sky-400 hover:text-sky-600 shrink-0 p-1"><i class="fas fa-times"></i></button>
-    </div>
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4 border-b pb-4">
-        <div>
-            <h2 class="text-xl sm:text-3xl font-bold text-slate-800">Financial Dashboard</h2>
-            <p class="text-xs sm:text-sm text-slate-500 mt-1">手取りの最大化と、安全な資金振り分け</p>
-        </div>
-        <div class="flex items-center justify-between w-full md:w-auto gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
-            <button onclick="changeDashMonth(-1)" class="p-1.5 text-slate-400 hover:text-blue-500 rounded"><i class="fas fa-chevron-left"></i></button>
-            <div class="flex flex-col items-center min-w-[110px]">
-                <label class="text-[10px] font-bold text-slate-500 mb-1">対象月</label>
-                <input type="month" id="dash-month" class="bg-transparent border-none p-0 text-sm font-bold focus:ring-0 cursor-pointer text-center" onchange="dashMonthChanged()">
-            </div>
-            <button onclick="changeDashMonth(1)" class="p-1.5 text-slate-400 hover:text-blue-500 rounded"><i class="fas fa-chevron-right"></i></button>
-            <div class="w-px h-6 bg-slate-300 mx-1"></div>
-            <div class="flex bg-slate-100 rounded p-1 gap-1">
-                <button id="btn-mode-auto"   onclick="setDashMode('auto')"   class="px-2 py-1.5 text-xs font-bold rounded-md bg-white text-blue-700 shadow-sm"><i class="fas fa-link mr-1"></i>自動</button>
-                <button id="btn-mode-manual" onclick="setDashMode('manual')" class="px-2 py-1.5 text-xs font-bold rounded-md text-slate-500">手入力</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        <!-- LEFT COLUMN -->
-        <div class="lg:col-span-5 space-y-5">
-            <!-- Monthly variable costs -->
-            <div class="bg-indigo-50/50 rounded-2xl border border-indigo-100 p-5 relative overflow-hidden">
-                <div class="absolute top-0 right-0 bg-indigo-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">月ごとに自動保存</div>
-                <h3 class="font-bold text-indigo-900 border-b border-indigo-200 pb-3 mb-4"><i class="fas fa-home text-indigo-500 mr-2"></i><span id="dash-month-label"></span>の変動費・按分</h3>
-                <p class="text-[10px] text-slate-500 mb-4">対象月ごとの実際の支払総額を入力してください。</p>
-                <div id="dash-monthly-costs" class="space-y-3"></div>
-            </div>
-            <!-- Summary -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-                <div class="flex justify-between items-center border-b pb-3 mb-4">
-                    <h3 class="font-bold text-slate-800 text-sm"><i class="fas fa-calculator text-slate-400 mr-2"></i>対象月の集計結果</h3>
-                    <span id="dash-mode-indicator" class="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded">自動連動中</span>
+            <div class="flex items-center justify-between w-full md:w-auto gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+                <button onclick="changeDashMonth(-1)" class="p-1.5 text-slate-400 hover:text-blue-500 rounded"><i class="fas fa-chevron-left"></i></button>
+                <div class="flex flex-col items-center min-w-[110px]">
+                    <label class="text-[10px] font-bold text-slate-500 mb-1">対象月</label>
+                    <input type="month" id="dash-month" class="bg-transparent border-none p-0 text-sm font-bold focus:ring-0 cursor-pointer text-center" onchange="dashMonthChanged()">
                 </div>
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-1">総売上（発生・請求ベース）</label>
-                        <div class="relative"><span class="absolute left-3 top-2.5 text-slate-400">¥</span>
-                        <input type="number" id="dash-revenue" class="w-full bg-slate-50 border rounded-lg py-2 pl-8 pr-3 font-bold disabled:opacity-60 disabled:bg-slate-100" onchange="saveManualInput('rev',this.value)" readonly></div>
-                        <p id="dash-rev-help" class="text-[10px] text-slate-400 mt-1">※収入管理表の対象月の「請求日(発生日)」から合算</p>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-1">経費合計（按分＋支出管理表）</label>
-                        <div class="relative"><span class="absolute left-3 top-2.5 text-slate-400">¥</span>
-                        <input type="number" id="dash-expense" class="w-full bg-slate-50 border rounded-lg py-2 pl-8 pr-3 font-bold disabled:opacity-60 disabled:bg-slate-100" onchange="saveManualInput('exp',this.value)" readonly></div>
-                        <p id="dash-exp-help" class="text-[10px] text-slate-400 mt-1">空欄のまま = 自動計算値を使用</p>
-                    </div>
-                    <div class="bg-slate-50 p-3 rounded-xl border">
-                        <div class="flex justify-between items-center">
-                            <span class="text-xs font-bold text-slate-500">税務プロファイル</span>
-                            <button onclick="switchTab('settings')" class="text-xs text-blue-500 hover:text-blue-700 font-bold"><i class="fas fa-cog mr-1"></i>設定変更</button>
-                        </div>
-                        <p class="text-[10px] text-slate-400 mt-1" id="dash-tax-summary">青色65万・2割特例・源泉考慮</p>
-                    </div>
-                </div>
-            </div>
-            <!-- Cash flow -->
-            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
-                <div class="bg-slate-800 p-4 text-white"><h3 class="font-bold text-sm"><i class="fas fa-random text-blue-400 mr-2"></i>対象月の資金振り分け</h3></div>
-                <div class="flex items-center p-4 border-b bg-slate-50"><div><p class="text-[10px] font-bold text-slate-500">Step 1: 手元に入るお金</p><p class="flow-number font-bold font-mono text-slate-800" id="flow-income">¥0</p></div></div>
-                <div class="flex items-center p-4 border-b"><div><p class="text-[10px] font-bold text-red-500"><i class="fas fa-lock mr-1"></i>Step 2: 税金用 防衛口座へ</p><p class="flow-number font-bold font-mono text-red-600" id="flow-tax">▲ ¥0</p></div></div>
-                <div class="flex items-start p-4 border-b">
-                    <div class="flex-1">
-                        <p class="text-[10px] font-bold text-amber-600">Step 3: 固定費・経費の実支払</p>
-                        <p class="flow-number font-bold font-mono text-amber-700" id="flow-fixed">▲ ¥0</p>
-                        <div class="mt-1 space-y-0.5">
-                            <p class="text-[9px] text-slate-400">実際の支払額（家賃・光熱費等の全額）</p>
-                            <p class="text-[10px] text-slate-500">うち税務上の経費計上額: <span class="font-mono font-bold text-amber-600" id="flow-fixed-deduct">¥0</span></p>
-                        </div>
-                    </div>
-                    <button onclick="switchTab('settings')" class="text-xs text-slate-400 hover:text-blue-500 mt-1 ml-2"><i class="fas fa-cog"></i></button>
-                </div>
-                <div class="flex items-center p-4 border-b relative group">
-                    <div><p class="text-[10px] font-bold text-emerald-600">Step 4: 積立（NISA/共済）</p><p class="flow-number font-bold font-mono text-emerald-700" id="flow-invest">▲ ¥0</p></div>
-                    <button onclick="switchTab('settings')" class="absolute right-4 text-xs text-slate-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition"><i class="fas fa-cog"></i></button>
-                </div>
-                <div class="flex items-center p-5 bg-blue-600 text-white rounded-b-xl">
-                    <div><p class="text-xs font-bold text-blue-200 uppercase tracking-widest mb-1">Result: 完全に自由な資金</p><p class="kpi-number-lg font-extrabold font-mono" id="flow-free">¥0</p></div>
+                <button onclick="changeDashMonth(1)" class="p-1.5 text-slate-400 hover:text-blue-500 rounded"><i class="fas fa-chevron-right"></i></button>
+                <div class="w-px h-6 bg-slate-300 mx-1"></div>
+                <div class="flex bg-slate-100 rounded p-1 gap-1">
+                    <button id="btn-mode-auto"   onclick="setDashMode('auto')"   class="px-2 py-1.5 text-xs font-bold rounded-md bg-white text-blue-700 shadow-sm"><i class="fas fa-link mr-1"></i>自動</button>
+                    <button id="btn-mode-manual" onclick="setDashMode('manual')" class="px-2 py-1.5 text-xs font-bold rounded-md text-slate-500">手入力</button>
                 </div>
             </div>
         </div>
 
-        <!-- RIGHT COLUMN -->
-        <div class="lg:col-span-7 space-y-5">
-            <!-- KPI Cards -->
-            <div class="grid grid-cols-2 gap-4">
-                <div class="bg-gradient-to-br from-red-500 to-red-700 rounded-2xl p-4 sm:p-6 text-white shadow-lg relative overflow-hidden">
-                    <div class="absolute -right-4 -bottom-4 opacity-10"><i class="fas fa-piggy-bank text-8xl"></i></div>
-                    <h4 class="text-[10px] sm:text-xs font-bold text-red-200 uppercase mb-2">毎月確保すべき税金プール</h4>
-                    <div class="kpi-number font-extrabold font-mono" id="kpi-tax-pool">¥0</div>
-                    <p class="text-[10px] text-red-200 mt-2 bg-red-800/50 inline-block px-2 py-1 rounded">源泉徴収 <span id="kpi-withheld-label">未考慮</span></p>
-                    <p class="text-[9px] text-red-300 mt-2 leading-relaxed">算出: (所得税＋住民税＋事業税＋消費税) ÷ 12<br>※年間の税金合計を毎月積み立てる目安額</p>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <!-- LEFT COLUMN -->
+            <div class="lg:col-span-5 space-y-5">
+                <!-- Monthly variable costs -->
+                <div class="bg-indigo-50/50 rounded-2xl border border-indigo-100 p-5 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-indigo-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">月ごとに自動保存</div>
+                    <h3 class="font-bold text-indigo-900 border-b border-indigo-200 pb-3 mb-4"><i class="fas fa-home text-indigo-500 mr-2"></i><span id="dash-month-label"></span>の変動費・按分</h3>
+                    <p class="text-[10px] text-slate-500 mb-4">対象月ごとの実際の支払総額を入力してください。</p>
+                    <div id="dash-monthly-costs" class="space-y-3"></div>
                 </div>
-                <div class="bg-white border rounded-2xl p-4 sm:p-5 shadow-sm relative overflow-hidden">
-                    <div class="absolute -right-4 -bottom-4 text-emerald-50 opacity-50"><i class="fas fa-gift text-8xl"></i></div>
-                    <h4 class="text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">ふるさと納税 上限目安</h4>
-                    <div class="kpi-number font-extrabold text-slate-800 font-mono" id="kpi-furusato">¥0</div>
-                    <div class="mt-2 space-y-1">
-                        <div class="flex justify-between text-[10px]">
-                            <span class="text-slate-500">今年の寄付済合計</span>
-                            <span class="font-mono font-bold text-amber-600" id="kpi-furusato-paid">¥0</span>
+                <!-- Summary -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                    <div class="flex justify-between items-center border-b pb-3 mb-4">
+                        <h3 class="font-bold text-slate-800 text-sm"><i class="fas fa-calculator text-slate-400 mr-2"></i>対象月の集計結果</h3>
+                        <span id="dash-mode-indicator" class="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded">自動連動中</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">総売上（発生・請求ベース）</label>
+                            <div class="relative"><span class="absolute left-3 top-2.5 text-slate-400">¥</span>
+                            <input type="number" id="dash-revenue" class="w-full bg-slate-50 border rounded-lg py-2 pl-8 pr-3 font-bold disabled:opacity-60 disabled:bg-slate-100" onchange="saveManualInput('rev',this.value)" readonly></div>
+                            <p id="dash-rev-help" class="text-[10px] text-slate-400 mt-1">※収入管理表の対象月の「請求日(発生日)」から合算</p>
                         </div>
-                        <div class="flex justify-between text-[10px]">
-                            <span class="text-emerald-600 font-bold">あと寄付できる目安</span>
-                            <span class="font-mono font-bold text-emerald-600" id="kpi-furusato-remaining">¥0</span>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">経費合計（按分＋支出管理表）</label>
+                            <div class="relative"><span class="absolute left-3 top-2.5 text-slate-400">¥</span>
+                            <input type="number" id="dash-expense" class="w-full bg-slate-50 border rounded-lg py-2 pl-8 pr-3 font-bold disabled:opacity-60 disabled:bg-slate-100" onchange="saveManualInput('exp',this.value)" readonly></div>
+                            <p id="dash-exp-help" class="text-[10px] text-slate-400 mt-1">空欄のまま = 自動計算値を使用</p>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-xl border">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-bold text-slate-500">税務プロファイル</span>
+                                <button onclick="switchTab('settings')" class="text-xs text-blue-500 hover:text-blue-700 font-bold"><i class="fas fa-cog mr-1"></i>設定変更</button>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mt-1" id="dash-tax-summary">青色65万・2割特例・源泉考慮</p>
                         </div>
                     </div>
-                    <button onclick="switchTab('settings');setTimeout(()=>document.getElementById('furusato-section').scrollIntoView({behavior:'smooth'}),200)" class="mt-2 text-[10px] text-blue-500 hover:text-blue-700 font-bold"><i class="fas fa-plus-circle mr-1"></i>寄付履歴を管理</button>
-                    <p class="text-[9px] text-slate-400 mt-1 leading-tight">算出: 住民税所得割×20%÷(1-所得税率×1.021-10%)+2,000円</p>
+                </div>
+                <!-- Cash flow -->
+                <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                    <div class="bg-slate-800 p-4 text-white"><h3 class="font-bold text-sm"><i class="fas fa-random text-blue-400 mr-2"></i>対象月の資金振り分け</h3></div>
+                    <div class="flex items-center p-4 border-b bg-slate-50"><div><p class="text-[10px] font-bold text-slate-500">Step 1: 手元に入るお金</p><p class="flow-number font-bold font-mono text-slate-800" id="flow-income">¥0</p></div></div>
+                    <div class="flex items-center p-4 border-b"><div><p class="text-[10px] font-bold text-red-500"><i class="fas fa-lock mr-1"></i>Step 2: 税金用 防衛口座へ</p><p class="flow-number font-bold font-mono text-red-600" id="flow-tax">▲ ¥0</p></div></div>
+                    <div class="flex items-start p-4 border-b">
+                        <div class="flex-1">
+                            <p class="text-[10px] font-bold text-amber-600">Step 3: 固定費・経費の実支払</p>
+                            <p class="flow-number font-bold font-mono text-amber-700" id="flow-fixed">▲ ¥0</p>
+                            <div class="mt-1 space-y-0.5">
+                                <p class="text-[9px] text-slate-400">実際の支払額（家賃・光熱費等の全額）</p>
+                                <p class="text-[10px] text-slate-500">うち税務上の経費計上額: <span class="font-mono font-bold text-amber-600" id="flow-fixed-deduct">¥0</span></p>
+                            </div>
+                        </div>
+                        <button onclick="switchTab('settings')" class="text-xs text-slate-400 hover:text-blue-500 mt-1 ml-2"><i class="fas fa-cog"></i></button>
+                    </div>
+                    <div class="flex items-center p-4 border-b relative group">
+                        <div><p class="text-[10px] font-bold text-emerald-600">Step 4: 積立（NISA/共済）</p><p class="flow-number font-bold font-mono text-emerald-700" id="flow-invest">▲ ¥0</p></div>
+                        <button onclick="switchTab('settings')" class="absolute right-4 text-xs text-slate-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition"><i class="fas fa-cog"></i></button>
+                    </div>
+                    <div class="flex items-center p-5 bg-blue-600 text-white rounded-b-xl">
+                        <div><p class="text-xs font-bold text-blue-200 uppercase tracking-widest mb-1">Result: 完全に自由な資金</p><p class="kpi-number-lg font-extrabold font-mono" id="flow-free">¥0</p></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Annual Forecast -->
-            <div class="bg-white rounded-2xl shadow-sm border p-5">
-                <h3 class="font-bold text-slate-800 border-b pb-3 mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                    <span class="text-sm sm:text-base"><i class="fas fa-chart-line text-purple-500 mr-2"></i>本年実績 ＆ 年間着地予測</span>
-                    <span class="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded leading-relaxed break-all" id="fc-logic-label">累計実績＋月平均×残月で算出</span>
-                </h3>
-                <div class="space-y-4">
-                    <!-- 確定分＋予測内訳 -->
-                    <div class="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
-                        <div class="grid grid-cols-2 divide-x divide-slate-200">
-                            <div class="p-3">
-                                <p class="text-[10px] font-bold text-slate-500 mb-1">✅ 累計実績（<span id="fc-accum-months">1</span>ヶ月分）</p>
-                                <p class="font-mono text-base sm:text-xl font-bold text-slate-800 truncate" id="fc-accum-revenue">¥0</p>
-                            </div>
-                            <div class="p-3">
-                                <p class="text-[10px] font-bold text-blue-500 mb-1">🔮 今後予測（残<span id="fc-remain-months">?</span>ヶ月）</p>
-                                <p class="font-mono text-base sm:text-xl font-bold text-blue-600 truncate" id="fc-predicted-revenue">¥0</p>
-                                <p class="text-[9px] text-slate-400 mt-0.5">月平均 <span id="fc-monthly-avg">¥0</span> × 残月</p>
-                            </div>
-                        </div>
-                        <div class="bg-white border-t border-slate-200 px-3 py-2 flex justify-between items-center">
-                            <p class="text-xs font-bold text-purple-700">年間着地予測（合計）</p>
-                            <p class="font-mono font-extrabold text-purple-700 text-base sm:text-lg" id="fc-revenue">¥0</p>
-                        </div>
+            <!-- RIGHT COLUMN -->
+            <div class="lg:col-span-7 space-y-5">
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-gradient-to-br from-red-500 to-red-700 rounded-2xl p-4 sm:p-6 text-white shadow-lg relative overflow-hidden">
+                        <div class="absolute -right-4 -bottom-4 opacity-10"><i class="fas fa-piggy-bank text-8xl"></i></div>
+                        <h4 class="text-[10px] sm:text-xs font-bold text-red-200 uppercase mb-2">毎月確保すべき税金プール</h4>
+                        <div class="kpi-number font-extrabold font-mono" id="kpi-tax-pool">¥0</div>
+                        <p class="text-[10px] text-red-200 mt-2 bg-red-800/50 inline-block px-2 py-1 rounded">源泉徴収 <span id="kpi-withheld-label">未考慮</span></p>
+                        <p class="text-[9px] text-red-300 mt-2 leading-relaxed">算出: (所得税＋住民税＋事業税＋消費税) ÷ 12<br>※年間の税金合計を毎月積み立てる目安額</p>
                     </div>
-                    <!-- 経費内訳 -->
-                    <div class="grid grid-cols-2 gap-2">
-                        <div class="p-3 bg-blue-50 rounded-xl border border-blue-100">
-                            <p class="text-[10px] font-bold text-blue-600 mb-1">経費（税務計上）</p>
-                            <p class="font-mono text-sm font-bold text-slate-800" id="fc-accum-expense">¥0</p>
-                            <p class="text-[9px] text-blue-400 mt-0.5">按分後・確定申告ベース</p>
-                        </div>
-                        <div class="p-3 bg-amber-50 rounded-xl border border-amber-100">
-                            <p class="text-[10px] font-bold text-amber-600 mb-1">経費（実支払）</p>
-                            <p class="font-mono text-sm font-bold text-amber-700" id="fc-accum-expense-cash">¥0</p>
-                            <p class="text-[9px] text-amber-400 mt-0.5">固定費全額・生活実態ベース</p>
-                        </div>
-                    </div>
-                    <!-- Bar chart with amounts -->
-                    <div>
-                        <div class="flex justify-between text-xs font-bold text-slate-600 mb-1">
-                            <span>予測ベースの年間売上</span><span class="font-mono text-sm" id="fc-revenue-bar">¥0</span>
-                        </div>
-                        <div class="w-full bg-slate-100 rounded-full h-4 overflow-hidden flex">
-                            <div class="bg-blue-400 h-4 rounded-l-full transition-all duration-500" id="bar-income" style="width:50%"></div>
-                            <div class="bg-amber-400 h-4 transition-all duration-500" id="bar-expense" style="width:15%"></div>
-                            <div class="bg-red-400 h-4 rounded-r-full transition-all duration-500" id="bar-tax" style="width:35%"></div>
-                        </div>
-                        <!-- Bar amount labels -->
-                        <div class="grid grid-cols-3 gap-1 mt-2">
-                            <div class="text-center">
-                                <p class="text-[10px] font-mono font-bold text-blue-600 truncate" id="bar-income-amt">¥0</p>
-                                <p class="text-[9px] text-slate-400 flex items-center justify-center"><span class="w-2 h-2 bg-blue-400 rounded-full mr-1 flex-shrink-0"></span>手取り</p>
+                    <div class="bg-white border rounded-2xl p-4 sm:p-5 shadow-sm relative overflow-hidden">
+                        <div class="absolute -right-4 -bottom-4 text-emerald-50 opacity-50"><i class="fas fa-gift text-8xl"></i></div>
+                        <h4 class="text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">ふるさと納税 上限目安</h4>
+                        <div class="kpi-number font-extrabold text-slate-800 font-mono" id="kpi-furusato">¥0</div>
+                        <div class="mt-2 space-y-1">
+                            <div class="flex justify-between text-[10px]">
+                                <span class="text-slate-500">今年の寄付済合計</span>
+                                <span class="font-mono font-bold text-amber-600" id="kpi-furusato-paid">¥0</span>
                             </div>
-                            <div class="text-center">
-                                <p class="text-[10px] font-mono font-bold text-amber-600 truncate" id="bar-expense-amt">¥0</p>
-                                <p class="text-[9px] text-slate-400 flex items-center justify-center"><span class="w-2 h-2 bg-amber-400 rounded-full mr-1 flex-shrink-0"></span>経費</p>
-                            </div>
-                            <div class="text-center">
-                                <p class="text-[10px] font-mono font-bold text-red-600 truncate" id="bar-tax-amt">¥0</p>
-                                <p class="text-[9px] text-slate-400 flex items-center justify-center"><span class="w-2 h-2 bg-red-400 rounded-full mr-1 flex-shrink-0"></span>税・社保</p>
+                            <div class="flex justify-between text-[10px]">
+                                <span class="text-emerald-600 font-bold">あと寄付できる目安</span>
+                                <span class="font-mono font-bold text-emerald-600" id="kpi-furusato-remaining">¥0</span>
                             </div>
                         </div>
+                        <button onclick="switchTab('settings');setTimeout(()=>document.getElementById('furusato-section').scrollIntoView({behavior:'smooth'}),200)" class="mt-2 text-[10px] text-blue-500 hover:text-blue-700 font-bold"><i class="fas fa-plus-circle mr-1"></i>寄付履歴を管理</button>
+                        <p class="text-[9px] text-slate-400 mt-1 leading-tight">算出: 住民税所得割×20%÷(1-所得税率×1.021-10%)+2,000円</p>
                     </div>
-                    <!-- Tax breakdown -->
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t">
-                        <div class="bg-slate-50 p-2 sm:p-3 rounded-lg border">
-                            <p class="text-[9px] sm:text-[10px] text-slate-500 mb-1">所得税（追加払）</p>
-                            <p class="font-mono font-bold text-red-600 text-xs sm:text-sm" id="fc-income-tax">¥0</p>
-                        </div>
-                        <div class="bg-slate-50 p-2 sm:p-3 rounded-lg border">
-                            <p class="text-[9px] sm:text-[10px] text-slate-500 mb-1">住民税（翌年）</p>
-                            <p class="font-mono font-bold text-red-600 text-xs sm:text-sm" id="fc-resident-tax">¥0</p>
-                        </div>
-                        <div class="bg-slate-50 p-2 sm:p-3 rounded-lg border">
-                            <p class="text-[9px] sm:text-[10px] text-slate-500 mb-0.5">個人事業税</p>
-                            <p class="font-mono font-bold text-red-600 text-xs sm:text-sm" id="fc-enterprise-tax">¥0</p>
-                            <p class="text-[8px] text-slate-400 mt-0.5 leading-tight">事業所得-290万×5%</p>
-                        </div>
-                        <div class="bg-slate-50 p-2 sm:p-3 rounded-lg border">
-                            <p class="text-[9px] sm:text-[10px] text-slate-500 mb-1" id="fc-cons-label">消費税（2割特例）</p>
-                            <p class="font-mono font-bold text-red-600 text-xs sm:text-sm" id="fc-consumption-tax">¥0</p>
-                        </div>
-                    </div>
-                    <div class="bg-red-50 p-3 rounded-lg border border-red-100 flex justify-between items-center gap-2">
-                        <p class="text-xs font-bold text-red-800"><i class="fas fa-exclamation-triangle mr-1"></i>翌年の後払い税金 合計予測</p>
-                        <p class="font-mono font-extrabold text-red-700 text-base sm:text-lg shrink-0" id="fc-total-tax">¥0</p>
-                    </div>
+                </div>
 
-                    <!-- ===== 税率ブラケット シミュレーター ===== -->
-                    <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-4 sm:p-5 mt-2 text-white">
-                        <h4 class="font-bold text-sm mb-3 flex items-center gap-2">
-                            <i class="fas fa-chart-bar text-yellow-400"></i>
-                            所得税率ブラケット シミュレーター
-                            <span class="text-[10px] bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded font-normal">節税プランニング</span>
-                        </h4>
-
-                        <!-- 所得税率表 -->
-                        <div class="mb-4">
-                            <p class="text-[10px] text-slate-400 font-bold mb-2"><i class="fas fa-table mr-1"></i>所得税率表（★ = 現在地）</p>
-                            <div class="rounded-xl overflow-hidden border border-white/10">
-                                <table class="w-full text-xs">
-                                    <thead><tr class="bg-white/10 text-slate-400 text-[10px]">
-                                        <th class="px-3 py-2 text-left font-bold">課税所得</th>
-                                        <th class="px-3 py-2 text-center font-bold">税率</th>
-                                        <th class="px-3 py-2 text-right font-bold">控除額</th>
-                                    </tr></thead>
-                                    <tbody id="bracket-table-body" class="divide-y divide-white/5">
-                                        <tr class="bracket-row" data-rate="5"><td class="px-3 py-2 text-slate-300">195万円以下</td><td class="px-3 py-2 text-center font-bold">5%</td><td class="px-3 py-2 text-right text-slate-400">—</td></tr>
-                                        <tr class="bracket-row" data-rate="10"><td class="px-3 py-2 text-slate-300">195万〜330万</td><td class="px-3 py-2 text-center font-bold">10%</td><td class="px-3 py-2 text-right text-slate-400">97,500</td></tr>
-                                        <tr class="bracket-row" data-rate="20"><td class="px-3 py-2 text-slate-300">330万〜695万</td><td class="px-3 py-2 text-center font-bold">20%</td><td class="px-3 py-2 text-right text-slate-400">427,500</td></tr>
-                                        <tr class="bracket-row" data-rate="23"><td class="px-3 py-2 text-slate-300">695万〜900万</td><td class="px-3 py-2 text-center font-bold">23%</td><td class="px-3 py-2 text-right text-slate-400">636,000</td></tr>
-                                        <tr class="bracket-row" data-rate="33"><td class="px-3 py-2 text-slate-300">900万〜1,800万</td><td class="px-3 py-2 text-center font-bold">33%</td><td class="px-3 py-2 text-right text-slate-400">1,536,000</td></tr>
-                                        <tr class="bracket-row" data-rate="40"><td class="px-3 py-2 text-slate-300">1,800万超</td><td class="px-3 py-2 text-center font-bold">40%</td><td class="px-3 py-2 text-right text-slate-400">2,796,000</td></tr>
-                                    </tbody>
-                                </table>
+                <!-- Annual Forecast -->
+                <div class="bg-white rounded-2xl shadow-sm border p-5">
+                    <h3 class="font-bold text-slate-800 border-b pb-3 mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                        <span class="text-sm sm:text-base"><i class="fas fa-chart-line text-purple-500 mr-2"></i>本年実績 ＆ 年間着地予測</span>
+                        <span class="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded leading-relaxed break-all" id="fc-logic-label">累計実績＋月平均×残月で算出</span>
+                    </h3>
+                    <div class="space-y-4">
+                        <!-- 確定分＋予測内訳 -->
+                        <div class="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                            <div class="grid grid-cols-2 divide-x divide-slate-200">
+                                <div class="p-3">
+                                    <p class="text-[10px] font-bold text-slate-500 mb-1">✅ 累計実績（<span id="fc-accum-months">1</span>ヶ月分）</p>
+                                    <p class="font-mono text-base sm:text-xl font-bold text-slate-800 truncate" id="fc-accum-revenue">¥0</p>
+                                </div>
+                                <div class="p-3">
+                                    <p class="text-[10px] font-bold text-blue-500 mb-1">🔮 今後予測（残<span id="fc-remain-months">?</span>ヶ月）</p>
+                                    <p class="font-mono text-base sm:text-xl font-bold text-blue-600 truncate" id="fc-predicted-revenue">¥0</p>
+                                    <p class="text-[9px] text-slate-400 mt-0.5">月平均 <span id="fc-monthly-avg">¥0</span> × 残月</p>
+                                </div>
+                            </div>
+                            <div class="bg-white border-t border-slate-200 px-3 py-2 flex justify-between items-center">
+                                <p class="text-xs font-bold text-purple-700">年間着地予測（合計）</p>
+                                <p class="font-mono font-extrabold text-purple-700 text-base sm:text-lg" id="fc-revenue">¥0</p>
                             </div>
                         </div>
+                        <!-- 経費内訳 -->
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="p-3 bg-blue-50 rounded-xl border border-blue-100">
+                                <p class="text-[10px] font-bold text-blue-600 mb-1">経費（税務計上）</p>
+                                <p class="font-mono text-sm font-bold text-slate-800" id="fc-accum-expense">¥0</p>
+                                <p class="text-[9px] text-blue-400 mt-0.5">按分後・確定申告ベース</p>
+                            </div>
+                            <div class="p-3 bg-amber-50 rounded-xl border border-amber-100">
+                                <p class="text-[10px] font-bold text-amber-600 mb-1">経費（実支払）</p>
+                                <p class="font-mono text-sm font-bold text-amber-700" id="fc-accum-expense-cash">¥0</p>
+                                <p class="text-[9px] text-amber-400 mt-0.5">固定費全額・生活実態ベース</p>
+                            </div>
+                        </div>
+                        <!-- Bar chart with amounts -->
+                        <div>
+                            <div class="flex justify-between text-xs font-bold text-slate-600 mb-1">
+                                <span>予測ベースの年間売上</span><span class="font-mono text-sm" id="fc-revenue-bar">¥0</span>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-4 overflow-hidden flex">
+                                <div class="bg-blue-400 h-4 rounded-l-full transition-all duration-500" id="bar-income" style="width:50%"></div>
+                                <div class="bg-amber-400 h-4 transition-all duration-500" id="bar-expense" style="width:15%"></div>
+                                <div class="bg-red-400 h-4 rounded-r-full transition-all duration-500" id="bar-tax" style="width:35%"></div>
+                            </div>
+                            <!-- Bar amount labels -->
+                            <div class="grid grid-cols-3 gap-1 mt-2">
+                                <div class="text-center">
+                                    <p class="text-[10px] font-mono font-bold text-blue-600 truncate" id="bar-income-amt">¥0</p>
+                                    <p class="text-[9px] text-slate-400 flex items-center justify-center"><span class="w-2 h-2 bg-blue-400 rounded-full mr-1 flex-shrink-0"></span>手取り</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-[10px] font-mono font-bold text-amber-600 truncate" id="bar-expense-amt">¥0</p>
+                                    <p class="text-[9px] text-slate-400 flex items-center justify-center"><span class="w-2 h-2 bg-amber-400 rounded-full mr-1 flex-shrink-0"></span>経費</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-[10px] font-mono font-bold text-red-600 truncate" id="bar-tax-amt">¥0</p>
+                                    <p class="text-[9px] text-slate-400 flex items-center justify-center"><span class="w-2 h-2 bg-red-400 rounded-full mr-1 flex-shrink-0"></span>税・社保</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Tax breakdown -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t">
+                            <div class="bg-slate-50 p-2 sm:p-3 rounded-lg border">
+                                <p class="text-[9px] sm:text-[10px] text-slate-500 mb-1">所得税（追加払）</p>
+                                <p class="font-mono font-bold text-red-600 text-xs sm:text-sm" id="fc-income-tax">¥0</p>
+                            </div>
+                            <div class="bg-slate-50 p-2 sm:p-3 rounded-lg border">
+                                <p class="text-[9px] sm:text-[10px] text-slate-500 mb-1">住民税（翌年）</p>
+                                <p class="font-mono font-bold text-red-600 text-xs sm:text-sm" id="fc-resident-tax">¥0</p>
+                            </div>
+                            <div class="bg-slate-50 p-2 sm:p-3 rounded-lg border">
+                                <p class="text-[9px] sm:text-[10px] text-slate-500 mb-0.5">個人事業税</p>
+                                <p class="font-mono font-bold text-red-600 text-xs sm:text-sm" id="fc-enterprise-tax">¥0</p>
+                                <p class="text-[8px] text-slate-400 mt-0.5 leading-tight">事業所得-290万×5%</p>
+                            </div>
+                            <div class="bg-slate-50 p-2 sm:p-3 rounded-lg border">
+                                <p class="text-[9px] sm:text-[10px] text-slate-500 mb-1" id="fc-cons-label">消費税（2割特例）</p>
+                                <p class="font-mono font-bold text-red-600 text-xs sm:text-sm" id="fc-consumption-tax">¥0</p>
+                            </div>
+                        </div>
+                        <div class="bg-red-50 p-3 rounded-lg border border-red-100 flex justify-between items-center gap-2">
+                            <p class="text-xs font-bold text-red-800"><i class="fas fa-exclamation-triangle mr-1"></i>翌年の後払い税金 合計予測</p>
+                            <p class="font-mono font-extrabold text-red-700 text-base sm:text-lg shrink-0" id="fc-total-tax">¥0</p>
+                        </div>
 
-                        <!-- 現在の税率 -->
-                        <div class="bg-white/10 rounded-xl p-3 mb-3">
-                            <div class="flex items-center justify-between flex-wrap gap-2">
-                                <div>
-                                    <p class="text-[10px] text-slate-400 mb-0.5">現在の課税所得 → 所得税率</p>
-                                    <div class="flex items-baseline gap-2">
-                                        <span class="font-mono font-bold text-white text-base" id="sim-taxable">¥0</span>
-                                        <span class="text-2xl font-extrabold" id="sim-rate-now" style="color:#fbbf24">-%</span>
+                        <!-- ===== 税率ブラケット シミュレーター ===== -->
+                        <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-4 sm:p-5 mt-2 text-white">
+                            <h4 class="font-bold text-sm mb-3 flex items-center gap-2">
+                                <i class="fas fa-chart-bar text-yellow-400"></i>
+                                所得税率ブラケット シミュレーター
+                                <span class="text-[10px] bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded font-normal">節税プランニング</span>
+                            </h4>
+
+                            <!-- 所得税率表 -->
+                            <div class="mb-4">
+                                <p class="text-[10px] text-slate-400 font-bold mb-2"><i class="fas fa-table mr-1"></i>所得税率表（★ = 現在地）</p>
+                                <div class="rounded-xl overflow-hidden border border-white/10">
+                                    <table class="w-full text-xs">
+                                        <thead><tr class="bg-white/10 text-slate-400 text-[10px]">
+                                            <th class="px-3 py-2 text-left font-bold">課税所得</th>
+                                            <th class="px-3 py-2 text-center font-bold">税率</th>
+                                            <th class="px-3 py-2 text-right font-bold">控除額</th>
+                                        </tr></thead>
+                                        <tbody id="bracket-table-body" class="divide-y divide-white/5">
+                                            <tr class="bracket-row" data-rate="5"><td class="px-3 py-2 text-slate-300">195万円以下</td><td class="px-3 py-2 text-center font-bold">5%</td><td class="px-3 py-2 text-right text-slate-400">—</td></tr>
+                                            <tr class="bracket-row" data-rate="10"><td class="px-3 py-2 text-slate-300">195万〜330万</td><td class="px-3 py-2 text-center font-bold">10%</td><td class="px-3 py-2 text-right text-slate-400">97,500</td></tr>
+                                            <tr class="bracket-row" data-rate="20"><td class="px-3 py-2 text-slate-300">330万〜695万</td><td class="px-3 py-2 text-center font-bold">20%</td><td class="px-3 py-2 text-right text-slate-400">427,500</td></tr>
+                                            <tr class="bracket-row" data-rate="23"><td class="px-3 py-2 text-slate-300">695万〜900万</td><td class="px-3 py-2 text-center font-bold">23%</td><td class="px-3 py-2 text-right text-slate-400">636,000</td></tr>
+                                            <tr class="bracket-row" data-rate="33"><td class="px-3 py-2 text-slate-300">900万〜1,800万</td><td class="px-3 py-2 text-center font-bold">33%</td><td class="px-3 py-2 text-right text-slate-400">1,536,000</td></tr>
+                                            <tr class="bracket-row" data-rate="40"><td class="px-3 py-2 text-slate-300">1,800万超</td><td class="px-3 py-2 text-center font-bold">40%</td><td class="px-3 py-2 text-right text-slate-400">2,796,000</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- 現在の税率 -->
+                            <div class="bg-white/10 rounded-xl p-3 mb-3">
+                                <div class="flex items-center justify-between flex-wrap gap-2">
+                                    <div>
+                                        <p class="text-[10px] text-slate-400 mb-0.5">現在の課税所得 → 所得税率</p>
+                                        <div class="flex items-baseline gap-2">
+                                            <span class="font-mono font-bold text-white text-base" id="sim-taxable">¥0</span>
+                                            <span class="text-2xl font-extrabold" id="sim-rate-now" style="color:#fbbf24">-%</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-[10px] text-slate-400 mb-0.5">現在の所得税額（年）</p>
+                                        <p class="font-mono font-bold text-red-300 text-sm" id="sim-it-now">¥0</p>
                                     </div>
                                 </div>
-                                <div class="text-right">
-                                    <p class="text-[10px] text-slate-400 mb-0.5">現在の所得税額（年）</p>
-                                    <p class="font-mono font-bold text-red-300 text-sm" id="sim-it-now">¥0</p>
+                                <!-- ブラケット進捗バー -->
+                                <div class="mt-3">
+                                    <div class="flex justify-between text-[9px] text-slate-400 mb-1 gap-1">
+                                        <span id="sim-bracket-low-label" class="leading-tight">前のブラケット</span>
+                                        <span id="sim-bracket-high-label" class="leading-tight text-right">次のブラケット上限</span>
+                                    </div>
+                                    <div class="w-full bg-white/10 rounded-full h-2.5 overflow-hidden">
+                                        <div id="sim-bracket-bar" class="h-2.5 rounded-full transition-all duration-500 bg-yellow-400" style="width:50%"></div>
+                                    </div>
                                 </div>
                             </div>
-                            <!-- ブラケット進捗バー -->
-                            <div class="mt-3">
-                                <div class="flex justify-between text-[9px] text-slate-400 mb-1 gap-1">
-                                    <span id="sim-bracket-low-label" class="leading-tight">前のブラケット</span>
-                                    <span id="sim-bracket-high-label" class="leading-tight text-right">次のブラケット上限</span>
-                                </div>
-                                <div class="w-full bg-white/10 rounded-full h-2.5 overflow-hidden">
-                                    <div id="sim-bracket-bar" class="h-2.5 rounded-full transition-all duration-500 bg-yellow-400" style="width:50%"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- 1段階下げるために必要な経費 -->
-                        <div id="sim-next-bracket" class="bg-emerald-900/40 border border-emerald-500/30 rounded-xl p-3 mb-3">
-                            <p class="text-[10px] text-emerald-300 font-bold mb-2 leading-snug"><i class="fas fa-arrow-down mr-1"></i>1段階下の税率（<span id="sim-rate-next">-%</span>）にするために</p>
-                            <div class="grid grid-cols-1 gap-2">
-                                <div class="flex justify-between items-center bg-white/5 rounded-lg px-3 py-2">
-                                    <p class="text-[10px] text-slate-400">必要な追加経費</p>
-                                    <p class="font-mono font-bold text-emerald-300 text-base" id="sim-needed-expense">¥0</p>
-                                </div>
-                                <div class="flex justify-between items-center bg-white/5 rounded-lg px-3 py-2">
-                                    <p class="text-[10px] text-slate-400">下がる上限（課税所得）</p>
-                                    <p class="font-mono font-bold text-white text-sm" id="sim-next-threshold">¥0以下</p>
-                                </div>
-                                <div class="flex justify-between items-center bg-white/5 rounded-lg px-3 py-2">
-                                    <p class="text-[10px] text-slate-400">節税効果（所得税）</p>
-                                    <p class="font-mono font-bold text-yellow-300 text-base" id="sim-saving">¥0</p>
+                            <!-- 1段階下げるために必要な経費 -->
+                            <div id="sim-next-bracket" class="bg-emerald-900/40 border border-emerald-500/30 rounded-xl p-3 mb-3">
+                                <p class="text-[10px] text-emerald-300 font-bold mb-2 leading-snug"><i class="fas fa-arrow-down mr-1"></i>1段階下の税率（<span id="sim-rate-next">-%</span>）にするために</p>
+                                <div class="grid grid-cols-1 gap-2">
+                                    <div class="flex justify-between items-center bg-white/5 rounded-lg px-3 py-2">
+                                        <p class="text-[10px] text-slate-400">必要な追加経費</p>
+                                        <p class="font-mono font-bold text-emerald-300 text-base" id="sim-needed-expense">¥0</p>
+                                    </div>
+                                    <div class="flex justify-between items-center bg-white/5 rounded-lg px-3 py-2">
+                                        <p class="text-[10px] text-slate-400">下がる上限（課税所得）</p>
+                                        <p class="font-mono font-bold text-white text-sm" id="sim-next-threshold">¥0以下</p>
+                                    </div>
+                                    <div class="flex justify-between items-center bg-white/5 rounded-lg px-3 py-2">
+                                        <p class="text-[10px] text-slate-400">節税効果（所得税）</p>
+                                        <p class="font-mono font-bold text-yellow-300 text-base" id="sim-saving">¥0</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div id="sim-lowest-bracket" class="hidden bg-blue-900/40 border border-blue-400/30 rounded-xl p-3 mb-3 text-center">
-                            <p class="text-[11px] text-blue-300 font-bold"><i class="fas fa-check-circle mr-1 text-emerald-400"></i>最低税率（5%）です！これ以上の税率引き下げはできません</p>
-                        </div>
+                            <div id="sim-lowest-bracket" class="hidden bg-blue-900/40 border border-blue-400/30 rounded-xl p-3 mb-3 text-center">
+                                <p class="text-[11px] text-blue-300 font-bold"><i class="fas fa-check-circle mr-1 text-emerald-400"></i>最低税率（5%）です！これ以上の税率引き下げはできません</p>
+                            </div>
 
-                        <!-- 控除内訳 -->
-                        <div class="bg-white/5 rounded-xl p-3 mb-3 border border-white/10">
-                            <p class="text-[10px] text-slate-400 font-bold mb-2"><i class="fas fa-calculator text-slate-400 mr-1"></i>課税所得の計算内訳</p>
-                            <div class="space-y-1 text-xs font-mono" id="sim-deduction-breakdown">
-                                <!-- JSで動的生成 -->
+                            <!-- 控除内訳 -->
+                            <div class="bg-white/5 rounded-xl p-3 mb-3 border border-white/10">
+                                <p class="text-[10px] text-slate-400 font-bold mb-2"><i class="fas fa-calculator text-slate-400 mr-1"></i>課税所得の計算内訳</p>
+                                <div class="space-y-1 text-xs font-mono" id="sim-deduction-breakdown">
+                                    <!-- JSで動的生成 -->
+                                </div>
+                                <div class="mt-2 pt-2 border-t border-white/10 flex justify-between items-center">
+                                    <span class="text-[10px] text-yellow-300 font-bold">＝ 課税所得</span>
+                                    <span class="font-mono font-extrabold text-yellow-300" id="sim-taxable-final">¥0</span>
+                                </div>
                             </div>
-                            <div class="mt-2 pt-2 border-t border-white/10 flex justify-between items-center">
-                                <span class="text-[10px] text-yellow-300 font-bold">＝ 課税所得</span>
-                                <span class="font-mono font-extrabold text-yellow-300" id="sim-taxable-final">¥0</span>
-                            </div>
-                        </div>
 
-                        <!-- 追加控除入力欄 -->
-                        <div class="border-t border-white/10 pt-3">
-                            <p class="text-[10px] text-slate-400 font-bold mb-2"><i class="fas fa-plus-circle text-slate-400 mr-1"></i>追加控除（任意入力）</p>
-                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                <div>
-                                    <label class="text-[9px] text-slate-400 block mb-1">生命保険料控除（最大12万）</label>
-                                    <div class="relative"><span class="absolute left-2 top-1.5 text-slate-400 text-xs">¥</span>
-                                    <input type="number" id="sim-life-ins" class="w-full bg-white/10 border border-white/20 rounded p-1.5 pl-6 font-mono text-xs text-white placeholder-slate-500" placeholder="0" oninput="runSimulation()"></div>
-                                </div>
-                                <div>
-                                    <label class="text-[9px] text-slate-400 block mb-1">地震保険料控除（最大5万）</label>
-                                    <div class="relative"><span class="absolute left-2 top-1.5 text-slate-400 text-xs">¥</span>
-                                    <input type="number" id="sim-quake-ins" class="w-full bg-white/10 border border-white/20 rounded p-1.5 pl-6 font-mono text-xs text-white placeholder-slate-500" placeholder="0" oninput="runSimulation()"></div>
-                                </div>
-                                <div>
-                                    <label class="text-[9px] text-slate-400 block mb-1">医療費控除（10万超の分）</label>
-                                    <div class="relative"><span class="absolute left-2 top-1.5 text-slate-400 text-xs">¥</span>
-                                    <input type="number" id="sim-medical" class="w-full bg-white/10 border border-white/20 rounded p-1.5 pl-6 font-mono text-xs text-white placeholder-slate-500" placeholder="0" oninput="runSimulation()"></div>
-                                </div>
-                                <div>
-                                    <label class="text-[9px] text-slate-400 block mb-1">配偶者控除</label>
-                                    <div class="relative"><span class="absolute left-2 top-1.5 text-slate-400 text-xs">¥</span>
-                                    <input type="number" id="sim-spouse" class="w-full bg-white/10 border border-white/20 rounded p-1.5 pl-6 font-mono text-xs text-white placeholder-slate-500" placeholder="0" oninput="runSimulation()"></div>
-                                </div>
-                                <div>
-                                    <label class="text-[9px] text-slate-400 block mb-1">扶養控除</label>
-                                    <div class="relative"><span class="absolute left-2 top-1.5 text-slate-400 text-xs">¥</span>
-                                    <input type="number" id="sim-dependent" class="w-full bg-white/10 border border-white/20 rounded p-1.5 pl-6 font-mono text-xs text-white placeholder-slate-500" placeholder="0" oninput="runSimulation()"></div>
-                                </div>
-                                <div>
-                                    <label class="text-[9px] text-slate-400 block mb-1">その他控除</label>
-                                    <div class="relative"><span class="absolute left-2 top-1.5 text-slate-400 text-xs">¥</span>
-                                    <input type="number" id="sim-other-ded" class="w-full bg-white/10 border border-white/20 rounded p-1.5 pl-6 font-mono text-xs text-white placeholder-slate-500" placeholder="0" oninput="runSimulation()"></div>
+                            <!-- 追加控除入力欄 -->
+                            <div class="border-t border-white/10 pt-3">
+                                <p class="text-[10px] text-slate-400 font-bold mb-2"><i class="fas fa-plus-circle text-slate-400 mr-1"></i>追加控除（任意入力）</p>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                    <div>
+                                        <label class="text-[9px] text-slate-400 block mb-1">生命保険料控除（最大12万）</label>
+                                        <div class="relative"><span class="absolute left-2 top-1.5 text-slate-400 text-xs">¥</span>
+                                        <input type="number" id="sim-life-ins" class="w-full bg-white/10 border border-white/20 rounded p-1.5 pl-6 font-mono text-xs text-white placeholder-slate-500" placeholder="0" oninput="runSimulation()"></div>
+                                    </div>
+                                    <div>
+                                        <label class="text-[9px] text-slate-400 block mb-1">地震保険料控除（最大5万）</label>
+                                        <div class="relative"><span class="absolute left-2 top-1.5 text-slate-400 text-xs">¥</span>
+                                        <input type="number" id="sim-quake-ins" class="w-full bg-white/10 border border-white/20 rounded p-1.5 pl-6 font-mono text-xs text-white placeholder-slate-500" placeholder="0" oninput="runSimulation()"></div>
+                                    </div>
+                                    <div>
+                                        <label class="text-[9px] text-slate-400 block mb-1">医療費控除（10万超の分）</label>
+                                        <div class="relative"><span class="absolute left-2 top-1.5 text-slate-400 text-xs">¥</span>
+                                        <input type="number" id="sim-medical" class="w-full bg-white/10 border border-white/20 rounded p-1.5 pl-6 font-mono text-xs text-white placeholder-slate-500" placeholder="0" oninput="runSimulation()"></div>
+                                    </div>
+                                    <div>
+                                        <label class="text-[9px] text-slate-400 block mb-1">配偶者控除</label>
+                                        <div class="relative"><span class="absolute left-2 top-1.5 text-slate-400 text-xs">¥</span>
+                                        <input type="number" id="sim-spouse" class="w-full bg-white/10 border border-white/20 rounded p-1.5 pl-6 font-mono text-xs text-white placeholder-slate-500" placeholder="0" oninput="runSimulation()"></div>
+                                    </div>
+                                    <div>
+                                        <label class="text-[9px] text-slate-400 block mb-1">扶養控除</label>
+                                        <div class="relative"><span class="absolute left-2 top-1.5 text-slate-400 text-xs">¥</span>
+                                        <input type="number" id="sim-dependent" class="w-full bg-white/10 border border-white/20 rounded p-1.5 pl-6 font-mono text-xs text-white placeholder-slate-500" placeholder="0" oninput="runSimulation()"></div>
+                                    </div>
+                                    <div>
+                                        <label class="text-[9px] text-slate-400 block mb-1">その他控除</label>
+                                        <div class="relative"><span class="absolute left-2 top-1.5 text-slate-400 text-xs">¥</span>
+                                        <input type="number" id="sim-other-ded" class="w-full bg-white/10 border border-white/20 rounded p-1.5 pl-6 font-mono text-xs text-white placeholder-slate-500" placeholder="0" oninput="runSimulation()"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Pie Charts -->
-            <div class="bg-white rounded-2xl shadow-sm border p-5">
-                <div class="flex items-center justify-between border-b pb-3 mb-4">
-                    <h3 class="font-bold text-slate-800 text-sm"><i class="fas fa-chart-pie text-indigo-500 mr-2"></i>収支内訳チャート</h3>
-                    <div class="flex bg-slate-100 rounded-lg p-1 gap-1">
-                        <button id="chart-tab-tax" onclick="switchChartTab('tax')" class="px-3 py-1.5 text-xs font-bold rounded-md bg-white text-blue-700 shadow-sm transition-all">📊 税務</button>
-                        <button id="chart-tab-cash" onclick="switchChartTab('cash')" class="px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700 transition-all">💰 実態</button>
-                    </div>
-                </div>
-                <!-- 税務ベース -->
-                <div id="chart-panel-tax">
-                    <div class="bg-blue-50 rounded-xl p-3 border border-blue-100 mb-3">
-                        <p class="text-[11px] font-bold text-blue-700 text-center mb-0.5">📊 税務ベース（確定申告用）</p>
-                        <p class="text-[9px] text-blue-400 text-center mb-3">経費＝按分後の経費計上額</p>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <p class="text-[10px] font-bold text-slate-500 text-center mb-2">対象月</p>
-                                <div style="max-width:180px;margin:0 auto"><canvas id="chart-monthly-tax"></canvas></div>
-                                <div id="legend-monthly-tax" class="mt-2 space-y-1"></div>
-                            </div>
-                            <div>
-                                <p class="text-[10px] font-bold text-slate-500 text-center mb-2">累計(1〜<span id="chart-accum-label">?</span>月)</p>
-                                <div style="max-width:180px;margin:0 auto"><canvas id="chart-cumulative-tax"></canvas></div>
-                                <div id="legend-cumulative-tax" class="mt-2 space-y-1"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- キャッシュベース -->
-                <div id="chart-panel-cash" class="hidden">
-                    <div class="bg-amber-50 rounded-xl p-3 border border-amber-100 mb-3">
-                        <p class="text-[11px] font-bold text-amber-700 text-center mb-0.5">💰 キャッシュベース（生活実態）</p>
-                        <p class="text-[9px] text-amber-400 text-center mb-3">経費＝固定費の実際の支払総額</p>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <p class="text-[10px] font-bold text-slate-500 text-center mb-2">対象月</p>
-                                <div style="max-width:180px;margin:0 auto"><canvas id="chart-monthly-cash"></canvas></div>
-                                <div id="legend-monthly-cash" class="mt-2 space-y-1"></div>
-                            </div>
-                            <div>
-                                <p class="text-[10px] font-bold text-slate-500 text-center mb-2">累計(1〜<span id="chart-accum-label2">?</span>月)</p>
-                                <div style="max-width:180px;margin:0 auto"><canvas id="chart-cumulative-cash"></canvas></div>
-                                <div id="legend-cumulative-cash" class="mt-2 space-y-1"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- 凡例はチャート下に金額付きで表示 -->
-            </div>
-
-            <!-- 月別売上推移 + クライアント別比率 -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <!-- 月別売上棒グラフ -->
+                <!-- Pie Charts -->
                 <div class="bg-white rounded-2xl shadow-sm border p-5">
-                    <h3 class="font-bold text-slate-800 text-sm border-b pb-3 mb-4 flex items-center justify-between">
-                        <span><i class="fas fa-chart-bar text-blue-500 mr-2"></i>月別売上推移</span>
-                        <span class="text-[10px] font-normal text-slate-400" id="monthly-bar-year-label"></span>
+                    <div class="flex items-center justify-between border-b pb-3 mb-4">
+                        <h3 class="font-bold text-slate-800 text-sm"><i class="fas fa-chart-pie text-indigo-500 mr-2"></i>収支内訳チャート</h3>
+                        <div class="flex bg-slate-100 rounded-lg p-1 gap-1">
+                            <button id="chart-tab-tax" onclick="switchChartTab('tax')" class="px-3 py-1.5 text-xs font-bold rounded-md bg-white text-blue-700 shadow-sm transition-all">📊 税務</button>
+                            <button id="chart-tab-cash" onclick="switchChartTab('cash')" class="px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700 transition-all">💰 実態</button>
+                        </div>
+                    </div>
+                    <!-- 税務ベース -->
+                    <div id="chart-panel-tax">
+                        <div class="bg-blue-50 rounded-xl p-3 border border-blue-100 mb-3">
+                            <p class="text-[11px] font-bold text-blue-700 text-center mb-0.5">📊 税務ベース（確定申告用）</p>
+                            <p class="text-[9px] text-blue-400 text-center mb-3">経費＝按分後の経費計上額</p>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-500 text-center mb-2">対象月</p>
+                                    <div style="max-width:180px;margin:0 auto"><canvas id="chart-monthly-tax"></canvas></div>
+                                    <div id="legend-monthly-tax" class="mt-2 space-y-1"></div>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-500 text-center mb-2">累計(1〜<span id="chart-accum-label">?</span>月)</p>
+                                    <div style="max-width:180px;margin:0 auto"><canvas id="chart-cumulative-tax"></canvas></div>
+                                    <div id="legend-cumulative-tax" class="mt-2 space-y-1"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- キャッシュベース -->
+                    <div id="chart-panel-cash" class="hidden">
+                        <div class="bg-amber-50 rounded-xl p-3 border border-amber-100 mb-3">
+                            <p class="text-[11px] font-bold text-amber-700 text-center mb-0.5">💰 キャッシュベース（生活実態）</p>
+                            <p class="text-[9px] text-amber-400 text-center mb-3">経費＝固定費の実際の支払総額</p>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-500 text-center mb-2">対象月</p>
+                                    <div style="max-width:180px;margin:0 auto"><canvas id="chart-monthly-cash"></canvas></div>
+                                    <div id="legend-monthly-cash" class="mt-2 space-y-1"></div>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-500 text-center mb-2">累計(1〜<span id="chart-accum-label2">?</span>月)</p>
+                                    <div style="max-width:180px;margin:0 auto"><canvas id="chart-cumulative-cash"></canvas></div>
+                                    <div id="legend-cumulative-cash" class="mt-2 space-y-1"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 凡例はチャート下に金額付きで表示 -->
+                </div>
+
+                <!-- 月別売上推移 + クライアント別比率 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <!-- 月別売上棒グラフ -->
+                    <div class="bg-white rounded-2xl shadow-sm border p-5">
+                        <h3 class="font-bold text-slate-800 text-sm border-b pb-3 mb-4 flex items-center justify-between">
+                            <span><i class="fas fa-chart-bar text-blue-500 mr-2"></i>月別売上推移</span>
+                            <span class="text-[10px] font-normal text-slate-400" id="monthly-bar-year-label"></span>
+                        </h3>
+                        <div style="position:relative;height:180px">
+                            <canvas id="chart-monthly-bar"></canvas>
+                        </div>
+                        <div class="flex justify-between items-center mt-3 bg-slate-50 rounded-lg px-3 py-2">
+                            <span class="text-[10px] text-slate-500">年間合計</span>
+                            <span class="font-mono font-bold text-slate-800 text-sm" id="monthly-bar-total">¥0</span>
+                        </div>
+                    </div>
+                    <!-- クライアント別売上比率 -->
+                    <div class="bg-white rounded-2xl shadow-sm border p-5">
+                        <h3 class="font-bold text-slate-800 text-sm border-b pb-3 mb-4">
+                            <i class="fas fa-users text-emerald-500 mr-2"></i>クライアント別売上比率
+                        </h3>
+                        <div style="max-width:160px;margin:0 auto 0.75rem">
+                            <canvas id="chart-client-ratio"></canvas>
+                        </div>
+                        <div id="legend-client-ratio" class="space-y-1.5"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== INCOME ==================== -->
+    <div id="tab-income" class="tab-content">
+        <div class="tab-sticky-header flex flex-col sm:flex-row justify-between sm:items-end gap-3">
+            <div><h2 class="text-2xl sm:text-3xl font-bold text-slate-800">Income Management</h2><p class="text-xs sm:text-sm text-slate-500 mt-1">クライアントからの報酬管理</p></div>
+            <div class="flex w-full sm:w-auto gap-2 flex-wrap sm:flex-nowrap">
+                <button onclick="bulkYayoiFlag('income')" class="w-full sm:w-auto justify-center bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-check-double mr-2"></i>弥生登録済にする</button>
+                <button onclick="downloadIncomeCSV()" class="w-full sm:w-auto justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-file-csv mr-2"></i>弥生CSV出力</button>
+                <button onclick="openIncomeModal()" class="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-plus mr-2"></i>新規報酬を追加</button>
+            </div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm resp-table" style="min-width:620px">
+                    <thead><tr class="bg-slate-50 border-b text-slate-500 text-xs">
+                        <th class="p-3 w-8 text-center"><input type="checkbox" id="inc-select-all" onchange="toggleAllIncomes(this)" class="rounded border-slate-300 cursor-pointer"></th>
+                        <th class="p-3 font-bold">入金日/請求日</th><th class="p-3 font-bold">クライアント/案件</th>
+                        <th class="p-3 font-bold text-right">税抜</th><th class="p-3 font-bold text-right">消費税</th>
+                        <th class="p-3 font-bold text-right">税込</th><th class="p-3 font-bold text-right">源泉</th>
+                        <th class="p-3 font-bold text-right text-emerald-700">実入金</th>
+                        <th class="p-3 font-bold text-center">状態</th>
+                        <th class="p-3 font-bold text-center text-amber-700">弥生</th>
+                        <th class="p-3 font-bold text-center">操作</th>
+                    </tr></thead>
+                    <tbody id="income-body" class="divide-y divide-slate-100"></tbody>
+                    <tfoot id="income-footer" class="bg-slate-50 border-t-2 border-slate-200"></tfoot>
+                </table>
+            </div>
+            <div id="income-empty" class="p-12 text-center text-slate-400 hidden"><i class="fas fa-file-invoice-dollar text-4xl mb-3 opacity-50"></i><p>収入データがありません</p></div>
+        </div>
+    </div>
+
+    <!-- ==================== EXPENSE ==================== -->
+    <div id="tab-expense" class="tab-content">
+        <div class="tab-sticky-header flex flex-col sm:flex-row justify-between sm:items-end gap-3">
+            <div><h2 class="text-2xl sm:text-3xl font-bold text-slate-800">Expense Management</h2><p class="text-xs sm:text-sm text-slate-500 mt-1">外注費・経費・交通費の月別管理</p></div>
+            <div class="flex w-full sm:w-auto gap-2 flex-wrap sm:flex-nowrap">
+                <button onclick="bulkYayoiFlag('expense')" class="w-full sm:w-auto justify-center bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-check-double mr-2"></i>弥生登録済にする</button>
+                <button onclick="downloadExpenseCSV()" class="w-full sm:w-auto justify-center bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-file-csv mr-2"></i>弥生CSV出力</button>
+                <button id="btn-del-selected-exp" onclick="deleteSelectedExpenses()" disabled class="w-full sm:w-auto justify-center bg-red-50 text-red-300 px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0 transition-all cursor-not-allowed"><i class="fas fa-trash-alt mr-2"></i>選択削除(<span id="del-exp-count">0</span>)</button>
+                <button onclick="openExpenseModal()" class="w-full sm:w-auto justify-center bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-plus mr-2"></i>新規追加</button>
+            </div>
+        </div>
+        <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
+            <button onclick="setExpenseFilter('all')"       id="flt-all"           class="px-4 py-1.5 rounded-full text-xs font-bold bg-slate-800 text-white whitespace-nowrap">すべて</button>
+            <button onclick="setExpenseFilter('外注費')"    id="flt-outsourcing"   class="px-4 py-1.5 rounded-full text-xs font-bold bg-white border text-slate-600 hover:bg-slate-50 whitespace-nowrap">外注費</button>
+            <button onclick="setExpenseFilter('交通費')"    id="flt-transport"     class="px-4 py-1.5 rounded-full text-xs font-bold bg-white border text-slate-600 hover:bg-slate-50 whitespace-nowrap">交通費</button>
+            <button onclick="setExpenseFilter('会議費')"    id="flt-meeting"       class="px-4 py-1.5 rounded-full text-xs font-bold bg-white border text-slate-600 hover:bg-slate-50 whitespace-nowrap">会議費</button>
+            <button onclick="setExpenseFilter('接待交際費')" id="flt-entertainment" class="px-4 py-1.5 rounded-full text-xs font-bold bg-white border text-slate-600 hover:bg-slate-50 whitespace-nowrap">接待交際費</button>
+            <button onclick="setExpenseFilter('消耗品費')"  id="flt-supplies"      class="px-4 py-1.5 rounded-full text-xs font-bold bg-white border text-slate-600 hover:bg-slate-50 whitespace-nowrap">消耗品費</button>
+            <button onclick="setExpenseFilter('経費')"      id="flt-expense"       class="px-4 py-1.5 rounded-full text-xs font-bold bg-white border text-slate-600 hover:bg-slate-50 whitespace-nowrap">その他経費</button>
+        </div>
+        <!-- カテゴリ別合計サマリー -->
+        <div id="expense-summary" class="bg-white rounded-2xl shadow-sm border p-4 mb-4">
+            <h4 class="text-xs font-bold text-slate-500 mb-3"><i class="fas fa-chart-bar text-red-400 mr-1"></i>カテゴリ別合計（表示中）</h4>
+            <div id="expense-summary-body" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs"></div>
+        </div>
+        <div id="expense-list-container" class="space-y-6"></div>
+        <div id="expense-empty" class="p-12 text-center text-slate-400 hidden bg-white rounded-2xl border"><i class="fas fa-hand-holding-usd text-4xl mb-3 opacity-50"></i><p>支出データがありません</p></div>
+    </div>
+
+    <!-- ==================== SETTINGS ==================== -->
+    <div id="tab-settings" class="tab-content">
+        <div class="tab-sticky-header flex flex-col sm:flex-row justify-between sm:items-end gap-2">
+            <div><h2 class="text-2xl sm:text-3xl font-bold text-slate-800">Settings & Masters</h2><p class="text-xs sm:text-sm text-slate-500 mt-1">税務プロファイル・按分経費・取引先マスターの管理</p></div>
+        </div>
+
+        <!-- ⑤ 税務プロファイル（全幅） -->
+        <div class="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl shadow-lg p-6 mb-6 text-white">
+            <h3 class="font-bold text-white border-b border-slate-600 pb-3 mb-5 flex items-center justify-between">
+                <span><i class="fas fa-file-alt text-blue-400 mr-2"></i>税務プロファイル設定</span>
+                <span class="text-[10px] bg-blue-600 px-2 py-1 rounded font-bold">シミュレーションに反映</span>
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <!-- 申告方式 -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-2"><i class="fas fa-scroll mr-1 text-yellow-400"></i>申告方式</label>
+                    <div class="space-y-2">
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="filing" value="blue65" onchange="saveTaxProfile()" class="mt-0.5 accent-blue-400"><div><p class="text-sm font-bold">青色申告 65万円控除</p><p class="text-[10px] text-slate-400">e-Tax提出・複式簿記 ← おすすめ</p></div></label>
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="filing" value="blue55" onchange="saveTaxProfile()" class="mt-0.5 accent-blue-400"><div><p class="text-sm font-bold">青色申告 55万円控除</p><p class="text-[10px] text-slate-400">紙提出・複式簿記</p></div></label>
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="filing" value="blue10" onchange="saveTaxProfile()" class="mt-0.5 accent-blue-400"><div><p class="text-sm font-bold">青色申告 10万円控除</p><p class="text-[10px] text-slate-400">簡易簿記</p></div></label>
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="filing" value="white" onchange="saveTaxProfile()" class="mt-0.5 accent-blue-400"><div><p class="text-sm font-bold">白色申告</p><p class="text-[10px] text-slate-400">控除なし</p></div></label>
+                    </div>
+                </div>
+                <!-- インボイス・消費税 -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-2"><i class="fas fa-receipt mr-1 text-green-400"></i>インボイス・消費税</label>
+                    <div class="space-y-2">
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="invoice" value="exempt" onchange="saveTaxProfile()" class="mt-0.5 accent-green-400"><div><p class="text-sm font-bold">免税事業者</p><p class="text-[10px] text-slate-400">インボイス未登録・消費税納税なし</p></div></label>
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="invoice" value="reduced2" onchange="saveTaxProfile()" class="mt-0.5 accent-green-400"><div><p class="text-sm font-bold">2割特例 〜2026年</p><p class="text-[10px] text-slate-400">課税売上の2%を納税</p></div></label>
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="invoice" value="reduced3" onchange="saveTaxProfile()" class="mt-0.5 accent-green-400"><div><p class="text-sm font-bold">3割特例 2027〜2028年</p><p class="text-[10px] text-slate-400">課税売上の3%を納税（延長分）</p></div></label>
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="invoice" value="simple" onchange="saveTaxProfile()" class="mt-0.5 accent-green-400"><div><p class="text-sm font-bold">簡易課税（第5種）</p><p class="text-[10px] text-slate-400">課税売上の5%を納税</p></div></label>
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="invoice" value="full" onchange="saveTaxProfile()" class="mt-0.5 accent-green-400"><div><p class="text-sm font-bold">本則課税</p><p class="text-[10px] text-slate-400">売上税額－仕入税額控除</p></div></label>
+                    </div>
+                </div>
+                <!-- 源泉徴収 -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-2"><i class="fas fa-hand-holding-usd mr-1 text-red-400"></i>源泉徴収</label>
+                    <div class="space-y-2">
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="withholding" value="true" onchange="saveTaxProfile()" class="mt-0.5 accent-red-400"><div><p class="text-sm font-bold">考慮する</p><p class="text-[10px] text-slate-400">収入から源泉徴収分を差引き</p></div></label>
+                        <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="withholding" value="false" onchange="saveTaxProfile()" class="mt-0.5 accent-red-400"><div><p class="text-sm font-bold">考慮しない</p><p class="text-[10px] text-slate-400">総売上で計算</p></div></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="space-y-6">
+                <!-- 按分経費 -->
+                <div class="bg-white rounded-2xl shadow-sm border p-6">
+                    <h3 class="font-bold text-slate-800 border-b pb-3 mb-4 flex items-center justify-between">
+                        <span><i class="fas fa-percent text-amber-500 mr-2"></i>按分経費 設定</span>
+                        <button onclick="openApportionCSVModal()" class="text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded font-bold shadow-sm"><i class="fas fa-file-csv mr-1"></i>弥生CSV出力</button>
                     </h3>
-                    <div style="position:relative;height:180px">
-                        <canvas id="chart-monthly-bar"></canvas>
-                    </div>
-                    <div class="flex justify-between items-center mt-3 bg-slate-50 rounded-lg px-3 py-2">
-                        <span class="text-[10px] text-slate-500">年間合計</span>
-                        <span class="font-mono font-bold text-slate-800 text-sm" id="monthly-bar-total">¥0</span>
+                    <div id="apportion-list" class="space-y-3"></div>
+                    <button onclick="addApportion()" class="mt-4 text-xs bg-amber-100 text-amber-700 px-3 py-1.5 rounded hover:bg-amber-200 font-bold"><i class="fas fa-plus mr-1"></i>按分項目を追加</button>
+                </div>
+                <!-- 積立 -->
+                <div class="bg-white rounded-2xl shadow-sm border p-6">
+                    <h3 class="font-bold text-slate-800 border-b pb-3 mb-4"><i class="fas fa-piggy-bank text-emerald-500 mr-2"></i>積立・控除設定</h3>
+                    <div class="space-y-3">
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">小規模企業共済（月額・デフォルト）</label>
+                            <div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="set-kyosai" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" onchange="saveSettings()"></div>
+                            <p class="text-[10px] text-slate-400 mt-1">※ダッシュボードで月別に上書き可。年間計算は「確定分＋今月額×残月」で算出</p>
+                        </div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">小規模企業共済 開始月</label>
+                            <input type="month" id="set-kyosai-start" class="w-full bg-slate-50 border rounded p-2 font-mono text-sm" onchange="saveSettings()">
+                            <p class="text-[10px] text-slate-400 mt-1">開始月より前は0円として計算されます</p>
+                        </div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">積立NISA（月額）</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="set-nisa" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" onchange="saveSettings()"></div></div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-1">iDeCo（月額）</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="set-ideco" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" onchange="saveSettings()"></div></div>
                     </div>
                 </div>
-                <!-- クライアント別売上比率 -->
-                <div class="bg-white rounded-2xl shadow-sm border p-5">
-                    <h3 class="font-bold text-slate-800 text-sm border-b pb-3 mb-4">
-                        <i class="fas fa-users text-emerald-500 mr-2"></i>クライアント別売上比率
+                <!-- 国民健康保険 -->
+                <div class="bg-white rounded-2xl shadow-sm border p-6">
+                    <h3 class="font-bold text-slate-800 border-b pb-3 mb-3 flex items-center gap-2">
+                        <i class="fas fa-hospital text-sky-500"></i>国民健康保険の計算設定
                     </h3>
-                    <div style="max-width:160px;margin:0 auto 0.75rem">
-                        <canvas id="chart-client-ratio"></canvas>
+                    <div class="bg-sky-50 border border-sky-100 rounded-xl p-3 mb-4 text-xs text-sky-800 space-y-1.5 leading-relaxed">
+                        <p class="font-bold text-sky-700"><i class="fas fa-info-circle mr-1"></i>算出ロジックと更新タイミング</p>
+                        <p>国保は<strong>前年の確定申告の課税所得</strong>をもとに計算されます。今年の所得は来年の保険料に反映されます。</p>
+                        <p>計算式（東京23区モデル）:<br>
+                        　所得割 = 前年課税所得 × 9.24%<br>
+                        　均等割 = 52,000円/年<br>
+                        　合計（上限106万円）</p>
+                        <p class="text-sky-600 font-bold">📅 更新タイミング: 毎年6〜7月に自治体から通知書が届いたら、下の欄を更新 → ダッシュボードの月別欄で手動上書き</p>
                     </div>
-                    <div id="legend-client-ratio" class="space-y-1.5"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ==================== INCOME ==================== -->
-<div id="tab-income" class="tab-content">
-    <div class="tab-sticky-header flex flex-col sm:flex-row justify-between sm:items-end gap-3">
-        <div><h2 class="text-2xl sm:text-3xl font-bold text-slate-800">Income Management</h2><p class="text-xs sm:text-sm text-slate-500 mt-1">クライアントからの報酬管理</p></div>
-        <div class="flex w-full sm:w-auto gap-2 flex-wrap sm:flex-nowrap">
-            <button onclick="bulkYayoiFlag('income')" class="w-full sm:w-auto justify-center bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-check-double mr-2"></i>弥生登録済にする</button>
-            <button onclick="downloadIncomeCSV()" class="w-full sm:w-auto justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-file-csv mr-2"></i>弥生CSV出力</button>
-            <button onclick="openIncomeModal()" class="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-plus mr-2"></i>新規報酬を追加</button>
-        </div>
-    </div>
-    <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm resp-table" style="min-width:620px">
-                <thead><tr class="bg-slate-50 border-b text-slate-500 text-xs">
-                    <th class="p-3 w-8 text-center"><input type="checkbox" id="inc-select-all" onchange="toggleAllIncomes(this)" class="rounded border-slate-300 cursor-pointer"></th>
-                    <th class="p-3 font-bold">入金日/請求日</th><th class="p-3 font-bold">クライアント/案件</th>
-                    <th class="p-3 font-bold text-right">税抜</th><th class="p-3 font-bold text-right">消費税</th>
-                    <th class="p-3 font-bold text-right">税込</th><th class="p-3 font-bold text-right">源泉</th>
-                    <th class="p-3 font-bold text-right text-emerald-700">実入金</th>
-                    <th class="p-3 font-bold text-center">状態</th>
-                    <th class="p-3 font-bold text-center text-amber-700">弥生</th>
-                    <th class="p-3 font-bold text-center">操作</th>
-                </tr></thead>
-                <tbody id="income-body" class="divide-y divide-slate-100"></tbody>
-                <tfoot id="income-footer" class="bg-slate-50 border-t-2 border-slate-200"></tfoot>
-            </table>
-        </div>
-        <div id="income-empty" class="p-12 text-center text-slate-400 hidden"><i class="fas fa-file-invoice-dollar text-4xl mb-3 opacity-50"></i><p>収入データがありません</p></div>
-    </div>
-</div>
-
-<!-- ==================== EXPENSE ==================== -->
-<div id="tab-expense" class="tab-content">
-    <div class="tab-sticky-header flex flex-col sm:flex-row justify-between sm:items-end gap-3">
-        <div><h2 class="text-2xl sm:text-3xl font-bold text-slate-800">Expense Management</h2><p class="text-xs sm:text-sm text-slate-500 mt-1">外注費・経費・交通費の月別管理</p></div>
-        <div class="flex w-full sm:w-auto gap-2 flex-wrap sm:flex-nowrap">
-            <button onclick="bulkYayoiFlag('expense')" class="w-full sm:w-auto justify-center bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-check-double mr-2"></i>弥生登録済にする</button>
-            <button onclick="downloadExpenseCSV()" class="w-full sm:w-auto justify-center bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-file-csv mr-2"></i>弥生CSV出力</button>
-            <button id="btn-del-selected-exp" onclick="deleteSelectedExpenses()" disabled class="w-full sm:w-auto justify-center bg-red-50 text-red-300 px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0 transition-all cursor-not-allowed"><i class="fas fa-trash-alt mr-2"></i>選択削除(<span id="del-exp-count">0</span>)</button>
-            <button onclick="openExpenseModal()" class="w-full sm:w-auto justify-center bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center shrink-0"><i class="fas fa-plus mr-2"></i>新規追加</button>
-        </div>
-    </div>
-    <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
-        <button onclick="setExpenseFilter('all')"       id="flt-all"           class="px-4 py-1.5 rounded-full text-xs font-bold bg-slate-800 text-white whitespace-nowrap">すべて</button>
-        <button onclick="setExpenseFilter('外注費')"    id="flt-outsourcing"   class="px-4 py-1.5 rounded-full text-xs font-bold bg-white border text-slate-600 hover:bg-slate-50 whitespace-nowrap">外注費</button>
-        <button onclick="setExpenseFilter('交通費')"    id="flt-transport"     class="px-4 py-1.5 rounded-full text-xs font-bold bg-white border text-slate-600 hover:bg-slate-50 whitespace-nowrap">交通費</button>
-        <button onclick="setExpenseFilter('会議費')"    id="flt-meeting"       class="px-4 py-1.5 rounded-full text-xs font-bold bg-white border text-slate-600 hover:bg-slate-50 whitespace-nowrap">会議費</button>
-        <button onclick="setExpenseFilter('接待交際費')" id="flt-entertainment" class="px-4 py-1.5 rounded-full text-xs font-bold bg-white border text-slate-600 hover:bg-slate-50 whitespace-nowrap">接待交際費</button>
-        <button onclick="setExpenseFilter('消耗品費')"  id="flt-supplies"      class="px-4 py-1.5 rounded-full text-xs font-bold bg-white border text-slate-600 hover:bg-slate-50 whitespace-nowrap">消耗品費</button>
-        <button onclick="setExpenseFilter('経費')"      id="flt-expense"       class="px-4 py-1.5 rounded-full text-xs font-bold bg-white border text-slate-600 hover:bg-slate-50 whitespace-nowrap">その他経費</button>
-    </div>
-    <!-- カテゴリ別合計サマリー -->
-    <div id="expense-summary" class="bg-white rounded-2xl shadow-sm border p-4 mb-4">
-        <h4 class="text-xs font-bold text-slate-500 mb-3"><i class="fas fa-chart-bar text-red-400 mr-1"></i>カテゴリ別合計（表示中）</h4>
-        <div id="expense-summary-body" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs"></div>
-    </div>
-    <div id="expense-list-container" class="space-y-6"></div>
-    <div id="expense-empty" class="p-12 text-center text-slate-400 hidden bg-white rounded-2xl border"><i class="fas fa-hand-holding-usd text-4xl mb-3 opacity-50"></i><p>支出データがありません</p></div>
-</div>
-
-<!-- ==================== SETTINGS ==================== -->
-<div id="tab-settings" class="tab-content">
-    <div class="tab-sticky-header flex flex-col sm:flex-row justify-between sm:items-end gap-2">
-        <div><h2 class="text-2xl sm:text-3xl font-bold text-slate-800">Settings & Masters</h2><p class="text-xs sm:text-sm text-slate-500 mt-1">税務プロファイル・按分経費・取引先マスターの管理</p></div>
-    </div>
-
-    <!-- ⑤ 税務プロファイル（全幅） -->
-    <div class="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl shadow-lg p-6 mb-6 text-white">
-        <h3 class="font-bold text-white border-b border-slate-600 pb-3 mb-5 flex items-center justify-between">
-            <span><i class="fas fa-file-alt text-blue-400 mr-2"></i>税務プロファイル設定</span>
-            <span class="text-[10px] bg-blue-600 px-2 py-1 rounded font-bold">シミュレーションに反映</span>
-        </h3>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            <!-- 申告方式 -->
-            <div>
-                <label class="block text-xs font-bold text-slate-300 mb-2"><i class="fas fa-scroll mr-1 text-yellow-400"></i>申告方式</label>
-                <div class="space-y-2">
-                    <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="filing" value="blue65" onchange="saveTaxProfile()" class="mt-0.5 accent-blue-400"><div><p class="text-sm font-bold">青色申告 65万円控除</p><p class="text-[10px] text-slate-400">e-Tax提出・複式簿記 ← おすすめ</p></div></label>
-                    <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="filing" value="blue55" onchange="saveTaxProfile()" class="mt-0.5 accent-blue-400"><div><p class="text-sm font-bold">青色申告 55万円控除</p><p class="text-[10px] text-slate-400">紙提出・複式簿記</p></div></label>
-                    <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="filing" value="blue10" onchange="saveTaxProfile()" class="mt-0.5 accent-blue-400"><div><p class="text-sm font-bold">青色申告 10万円控除</p><p class="text-[10px] text-slate-400">簡易簿記</p></div></label>
-                    <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="filing" value="white" onchange="saveTaxProfile()" class="mt-0.5 accent-blue-400"><div><p class="text-sm font-bold">白色申告</p><p class="text-[10px] text-slate-400">控除なし</p></div></label>
-                </div>
-            </div>
-            <!-- インボイス・消費税 -->
-            <div>
-                <label class="block text-xs font-bold text-slate-300 mb-2"><i class="fas fa-receipt mr-1 text-green-400"></i>インボイス・消費税</label>
-                <div class="space-y-2">
-                    <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="invoice" value="exempt" onchange="saveTaxProfile()" class="mt-0.5 accent-green-400"><div><p class="text-sm font-bold">免税事業者</p><p class="text-[10px] text-slate-400">インボイス未登録・消費税納税なし</p></div></label>
-                    <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="invoice" value="reduced2" onchange="saveTaxProfile()" class="mt-0.5 accent-green-400"><div><p class="text-sm font-bold">2割特例 〜2026年</p><p class="text-[10px] text-slate-400">課税売上の2%を納税</p></div></label>
-                    <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="invoice" value="reduced3" onchange="saveTaxProfile()" class="mt-0.5 accent-green-400"><div><p class="text-sm font-bold">3割特例 2027〜2028年</p><p class="text-[10px] text-slate-400">課税売上の3%を納税（延長分）</p></div></label>
-                    <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="invoice" value="simple" onchange="saveTaxProfile()" class="mt-0.5 accent-green-400"><div><p class="text-sm font-bold">簡易課税（第5種）</p><p class="text-[10px] text-slate-400">課税売上の5%を納税</p></div></label>
-                    <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="invoice" value="full" onchange="saveTaxProfile()" class="mt-0.5 accent-green-400"><div><p class="text-sm font-bold">本則課税</p><p class="text-[10px] text-slate-400">売上税額－仕入税額控除</p></div></label>
-                </div>
-            </div>
-            <!-- 源泉徴収 -->
-            <div>
-                <label class="block text-xs font-bold text-slate-300 mb-2"><i class="fas fa-hand-holding-usd mr-1 text-red-400"></i>源泉徴収</label>
-                <div class="space-y-2">
-                    <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="withholding" value="true" onchange="saveTaxProfile()" class="mt-0.5 accent-red-400"><div><p class="text-sm font-bold">考慮する</p><p class="text-[10px] text-slate-400">収入から源泉徴収分を差引き</p></div></label>
-                    <label class="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-700 transition"><input type="radio" name="withholding" value="false" onchange="saveTaxProfile()" class="mt-0.5 accent-red-400"><div><p class="text-sm font-bold">考慮しない</p><p class="text-[10px] text-slate-400">総売上で計算</p></div></label>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="space-y-6">
-            <!-- 按分経費 -->
-            <div class="bg-white rounded-2xl shadow-sm border p-6">
-                <h3 class="font-bold text-slate-800 border-b pb-3 mb-4 flex items-center justify-between">
-                    <span><i class="fas fa-percent text-amber-500 mr-2"></i>按分経費 設定</span>
-                    <button onclick="openApportionCSVModal()" class="text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded font-bold shadow-sm"><i class="fas fa-file-csv mr-1"></i>弥生CSV出力</button>
-                </h3>
-                <div id="apportion-list" class="space-y-3"></div>
-                <button onclick="addApportion()" class="mt-4 text-xs bg-amber-100 text-amber-700 px-3 py-1.5 rounded hover:bg-amber-200 font-bold"><i class="fas fa-plus mr-1"></i>按分項目を追加</button>
-            </div>
-            <!-- 積立 -->
-            <div class="bg-white rounded-2xl shadow-sm border p-6">
-                <h3 class="font-bold text-slate-800 border-b pb-3 mb-4"><i class="fas fa-piggy-bank text-emerald-500 mr-2"></i>積立・控除設定</h3>
-                <div class="space-y-3">
-                    <div><label class="block text-xs font-bold text-slate-500 mb-1">小規模企業共済（月額・デフォルト）</label>
-                        <div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="set-kyosai" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" onchange="saveSettings()"></div>
-                        <p class="text-[10px] text-slate-400 mt-1">※ダッシュボードで月別に上書き可。年間計算は「確定分＋今月額×残月」で算出</p>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">前年の課税所得（確定申告書の「課税される所得金額」）</label>
+                        <div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span>
+                        <input type="number" id="set-prev-taxable" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" placeholder="0（未入力の場合は今年の収支から概算）" onchange="saveSettings()"></div>
+                        <p class="text-[10px] text-slate-400 mt-1">確定申告書 → 「課税される所得金額」の欄の数字を入力してください</p>
                     </div>
-                    <div><label class="block text-xs font-bold text-slate-500 mb-1">小規模企業共済 開始月</label>
-                        <input type="month" id="set-kyosai-start" class="w-full bg-slate-50 border rounded p-2 font-mono text-sm" onchange="saveSettings()">
-                        <p class="text-[10px] text-slate-400 mt-1">開始月より前は0円として計算されます</p>
+                    <div class="mt-3 bg-slate-50 p-3 rounded-lg border">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-slate-600">概算 国保年額</span>
+                            <span class="font-mono font-bold text-sky-700" id="hlth-estimate-display">¥—</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-1">※実際の保険料はダッシュボードの月別欄で上書きすると正確に反映されます</p>
                     </div>
-                    <div><label class="block text-xs font-bold text-slate-500 mb-1">積立NISA（月額）</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="set-nisa" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" onchange="saveSettings()"></div></div>
-                    <div><label class="block text-xs font-bold text-slate-500 mb-1">iDeCo（月額）</label><div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span><input type="number" id="set-ideco" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" onchange="saveSettings()"></div></div>
+                </div>
+                <!-- Drive フォルダURL設定 -->
+                <div class="bg-white rounded-2xl shadow-sm border p-6">
+                    <h3 class="font-bold text-slate-800 border-b pb-3 mb-4">
+                        <i class="fas fa-folder-open text-blue-500 mr-2"></i>Google Driveフォルダ設定
+                    </h3>
+                    <p class="text-[10px] text-slate-500 mb-4">AI解析タブの「フォルダを開く」ボタンのリンク先を設定します。Google DriveのフォルダURLをコピーして貼り付けてください。</p>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1"><i class="fas fa-receipt text-indigo-500 mr-1"></i>経費レシートフォルダ</label>
+                            <input type="url" id="set-drive-receipt" class="w-full bg-slate-50 border rounded p-2 text-xs font-mono" placeholder="https://drive.google.com/drive/folders/..." onchange="saveSettings()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1"><i class="fas fa-motorcycle text-orange-500 mr-1"></i>デリバリーレシートフォルダ</label>
+                            <input type="url" id="set-drive-delivery" class="w-full bg-slate-50 border rounded p-2 text-xs font-mono" placeholder="https://drive.google.com/drive/folders/..." onchange="saveSettings()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1"><i class="fas fa-box text-purple-500 mr-1"></i>消耗品費フォルダ</label>
+                            <input type="url" id="set-drive-supplies" class="w-full bg-slate-50 border rounded p-2 text-xs font-mono" placeholder="https://drive.google.com/drive/folders/..." onchange="saveSettings()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1"><i class="fas fa-subway text-teal-500 mr-1"></i>交通費フォルダ</label>
+                            <input type="url" id="set-drive-transport" class="w-full bg-slate-50 border rounded p-2 text-xs font-mono" placeholder="https://drive.google.com/drive/folders/..." onchange="saveSettings()">
+                        </div>
+                    </div>
+                </div>
+                <!-- API Key -->
+                <div class="bg-white rounded-2xl shadow-sm border p-6">
+                    <h3 class="font-bold text-slate-800 border-b pb-3 mb-4 flex items-center justify-between">
+                        <span><i class="fas fa-key text-blue-500 mr-2"></i>AI連携用 APIキー</span>
+                        <span class="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded font-bold">AI利用時は必須</span>
+                    </h3>
+                    <p class="text-[10px] text-slate-500 mb-3">AI機能使用時はご自身のGemini APIキーを設定してください。<br>※ブラウザごとに保存されます。</p>
+                    <input type="password" id="set-api-key" class="w-full bg-slate-50 border border-slate-200 rounded p-2 font-mono text-sm transition-all duration-300 outline-none" placeholder="AIzaSy..." onchange="saveSettings()">
                 </div>
             </div>
-            <!-- 国民健康保険 -->
-            <div class="bg-white rounded-2xl shadow-sm border p-6">
-                <h3 class="font-bold text-slate-800 border-b pb-3 mb-3 flex items-center gap-2">
-                    <i class="fas fa-hospital text-sky-500"></i>国民健康保険の計算設定
-                </h3>
-                <div class="bg-sky-50 border border-sky-100 rounded-xl p-3 mb-4 text-xs text-sky-800 space-y-1.5 leading-relaxed">
-                    <p class="font-bold text-sky-700"><i class="fas fa-info-circle mr-1"></i>算出ロジックと更新タイミング</p>
-                    <p>国保は<strong>前年の確定申告の課税所得</strong>をもとに計算されます。今年の所得は来年の保険料に反映されます。</p>
-                    <p>計算式（東京23区モデル）:<br>
-                    　所得割 = 前年課税所得 × 9.24%<br>
-                    　均等割 = 52,000円/年<br>
-                    　合計（上限106万円）</p>
-                    <p class="text-sky-600 font-bold">📅 更新タイミング: 毎年6〜7月に自治体から通知書が届いたら、下の欄を更新 → ダッシュボードの月別欄で手動上書き</p>
+
+            <div class="space-y-6">
+                <!-- ふるさと納税 -->
+                <div id="furusato-section" class="bg-white rounded-2xl shadow-sm border p-6">
+                    <div class="flex justify-between items-center border-b pb-3 mb-4">
+                        <h3 class="font-bold text-slate-800"><i class="fas fa-gift text-emerald-500 mr-2"></i>ふるさと納税 寄付履歴</h3>
+                        <button onclick="openFurusatoModal()" class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-bold hover:bg-emerald-200"><i class="fas fa-plus mr-1"></i>追加</button>
+                    </div>
+                    <div id="furusato-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                    <div class="mt-3 pt-3 border-t flex justify-between items-center bg-emerald-50 p-3 rounded-lg">
+                        <span class="text-sm font-bold text-emerald-700">今年の寄付合計</span>
+                        <span class="text-xl font-bold font-mono text-emerald-700" id="furusato-total">¥0</span>
+                    </div>
                 </div>
+                <!-- 稼働管理表 -->
+                <div class="bg-white rounded-2xl shadow-sm border p-6">
+                    <div class="flex justify-between items-center border-b pb-3 mb-4">
+                        <h3 class="font-bold text-slate-800"><i class="fas fa-table text-green-500 mr-2"></i>各社 稼働管理表</h3>
+                        <button onclick="addWorkTable()" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-bold hover:bg-green-200"><i class="fas fa-plus mr-1"></i>追加</button>
+                    </div>
+                    <div id="work-tables-list" class="space-y-3"></div>
+                    <p class="text-[10px] text-slate-400 mt-3"><i class="fas fa-info-circle mr-1"></i>会社名とスプレッドシートURLを入力して保存されます</p>
+                </div>
+                <!-- 外部ツール -->
+                <div class="bg-white rounded-2xl shadow-sm border p-6">
+                    <div class="flex justify-between items-center border-b pb-3 mb-4">
+                        <h3 class="font-bold text-slate-800"><i class="fas fa-link text-indigo-500 mr-2"></i>外部ツール連携</h3>
+                        <button onclick="addTool()" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded font-bold"><i class="fas fa-plus mr-1"></i>追加</button>
+                    </div>
+                    <div id="tools-list" class="space-y-3"></div>
+                </div>
+                <!-- 取引先マスター -->
+                <div class="bg-white rounded-2xl shadow-sm border p-6">
+                    <h3 class="font-bold text-slate-800 border-b pb-3 mb-4"><i class="fas fa-building text-blue-500 mr-2"></i>取引先マスター</h3>
+                    <div class="mb-5">
+                        <label class="block text-xs font-bold text-slate-500 mb-2">収入用（クライアント）</label>
+                        <div class="flex gap-2 mb-2"><input type="text" id="new-client" class="flex-1 bg-slate-50 border rounded p-2 text-sm" placeholder="会社名"><button onclick="addMaster('clients','new-client')" class="bg-blue-600 text-white px-3 rounded text-sm font-bold">追加</button></div>
+                        <div id="client-master-list" class="flex flex-wrap gap-2"></div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-2">支出用（外注先・店舗）</label>
+                        <div class="flex gap-2 mb-2"><input type="text" id="new-payee" class="flex-1 bg-slate-50 border rounded p-2 text-sm" placeholder="外注先名"><button onclick="addMaster('payees','new-payee')" class="bg-red-600 text-white px-3 rounded text-sm font-bold">追加</button></div>
+                        <div id="payee-master-list" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+                <!-- サブスク -->
+                <div class="bg-white rounded-2xl shadow-sm border p-6">
+                    <div class="flex justify-between items-center border-b pb-3 mb-4">
+                        <h3 class="font-bold text-slate-800"><i class="fas fa-sync text-purple-500 mr-2"></i>事業用サブスク</h3>
+                        <button onclick="addSub()" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded font-bold"><i class="fas fa-plus mr-1"></i>追加</button>
+                    </div>
+                    <div id="sub-list" class="space-y-3"></div>
+                    <div class="mt-4 pt-4 border-t flex justify-between items-center bg-slate-50 p-3 rounded-lg">
+                        <span class="text-sm font-bold text-slate-600">サブスク合計</span>
+                        <span class="text-xl font-bold font-mono" id="set-sub-total">¥0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Backup -->
+        <div class="mt-8 bg-white rounded-2xl shadow-sm border p-6">
+            <h3 class="font-bold text-slate-800 border-b pb-3 mb-4"><i class="fas fa-database text-blue-500 mr-2"></i>バックアップ・復元</h3>
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button onclick="exportData()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 px-4 rounded flex items-center justify-center"><i class="fas fa-download mr-2"></i>データをバックアップ保存</button>
+                <div class="flex-1"><input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(event)"><button onclick="document.getElementById('import-file').click()" class="w-full bg-white border hover:bg-slate-50 text-slate-700 font-bold py-2 px-4 rounded flex items-center justify-center"><i class="fas fa-upload mr-2"></i>データを復元</button></div>
+            </div>
+        </div>
+        <!-- Cross-device sync guide -->
+        <div class="mt-4 bg-amber-50 border border-amber-200 rounded-2xl p-5">
+            <h3 class="font-bold text-amber-800 mb-2"><i class="fas fa-mobile-alt mr-2"></i>スマホ↔PC 連動について</h3>
+            <p class="text-xs text-amber-700 leading-relaxed mb-3">現在のデータはブラウザのローカルストレージに保存されるため、<strong>デバイス間で自動同期されません</strong>。以下の方法で対応できます：</p>
+            <div class="space-y-3">
+                <div class="bg-white border border-amber-100 rounded-xl p-3">
+                    <p class="font-bold text-xs text-slate-700 mb-1"><i class="fas fa-star text-amber-500 mr-1"></i>おすすめ：手動バックアップ同期</p>
+                    <p class="text-xs text-slate-500 leading-relaxed">① PCで「データをバックアップ保存」→ JSONファイルをGoogle Drive等に保存<br>② スマホのブラウザでこのページを開き「データを復元」→ 同じJSONを選択</p>
+                </div>
+                <div class="bg-white border border-amber-100 rounded-xl p-3">
+                    <p class="font-bold text-xs text-slate-700 mb-1"><i class="fas fa-cloud text-blue-500 mr-1"></i>自動同期（上級）：Firebase連携</p>
+                    <p class="text-xs text-slate-500 leading-relaxed">① <a href="https://console.firebase.google.com" target="_blank" class="text-blue-500 underline">Firebase Console</a> で無料プロジェクトを作成<br>② Firestoreデータベースを有効化（テストモード）<br>③ Webアプリを登録し取得した設定を開発者に共有 → コードに組み込みで自動同期が実現</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== TOOLS ==================== -->
+    <div id="tab-tools" class="tab-content">
+        <div class="mb-6 border-b pb-4"><h2 class="text-2xl sm:text-3xl font-bold text-slate-800">AI Tools</h2><p class="text-xs sm:text-sm text-slate-500 mt-1">領収書・交通費の自動データ化</p></div>
+
+        <!-- PDF Import -->
+        <div class="mb-8 bg-gradient-to-r from-blue-600 to-indigo-700 p-5 sm:p-6 rounded-2xl shadow-lg text-white">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1">前年の課税所得（確定申告書の「課税される所得金額」）</label>
-                    <div class="relative"><span class="absolute left-3 top-2 text-slate-400">¥</span>
-                    <input type="number" id="set-prev-taxable" class="w-full bg-slate-50 border rounded p-2 pl-8 font-mono" placeholder="0（未入力の場合は今年の収支から概算）" onchange="saveSettings()"></div>
-                    <p class="text-[10px] text-slate-400 mt-1">確定申告書 → 「課税される所得金額」の欄の数字を入力してください</p>
+                    <h3 class="font-bold text-lg"><i class="fas fa-file-pdf mr-2 text-red-300"></i>PDF取引帳 一括インポート</h3>
+                    <p class="text-sm text-blue-100 mt-1">「取引帳.pdf」の2026年分データを自動入力します。</p>
                 </div>
-                <div class="mt-3 bg-slate-50 p-3 rounded-lg border">
-                    <div class="flex justify-between items-center">
-                        <span class="text-xs font-bold text-slate-600">概算 国保年額</span>
-                        <span class="font-mono font-bold text-sky-700" id="hlth-estimate-display">¥—</span>
-                    </div>
-                    <p class="text-[10px] text-slate-400 mt-1">※実際の保険料はダッシュボードの月別欄で上書きすると正確に反映されます</p>
-                </div>
-            </div>
-            <!-- API Key -->
-            <div class="bg-white rounded-2xl shadow-sm border p-6">
-                <h3 class="font-bold text-slate-800 border-b pb-3 mb-4 flex items-center justify-between">
-                    <span><i class="fas fa-key text-blue-500 mr-2"></i>AI連携用 APIキー</span>
-                    <span class="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded font-bold">AI利用時は必須</span>
-                </h3>
-                <p class="text-[10px] text-slate-500 mb-3">AI機能使用時はご自身のGemini APIキーを設定してください。<br>※ブラウザごとに保存されます。</p>
-                <input type="password" id="set-api-key" class="w-full bg-slate-50 border border-slate-200 rounded p-2 font-mono text-sm transition-all duration-300 outline-none" placeholder="AIzaSy..." onchange="saveSettings()">
+                <button onclick="importPdfData2026()" class="bg-white text-blue-700 px-5 py-2.5 rounded-full font-bold shadow-md hover:bg-blue-50 transition flex items-center shrink-0">
+                    <i class="fas fa-file-import mr-2"></i>PDFから取り込む
+                </button>
             </div>
         </div>
 
-        <div class="space-y-6">
-            <!-- ふるさと納税 -->
-            <div id="furusato-section" class="bg-white rounded-2xl shadow-sm border p-6">
-                <div class="flex justify-between items-center border-b pb-3 mb-4">
-                    <h3 class="font-bold text-slate-800"><i class="fas fa-gift text-emerald-500 mr-2"></i>ふるさと納税 寄付履歴</h3>
-                    <button onclick="openFurusatoModal()" class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-bold hover:bg-emerald-200"><i class="fas fa-plus mr-1"></i>追加</button>
+        <div class="space-y-8">
+            <!-- ===== 経費レシートAI解析 ===== -->
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <div class="bg-gradient-to-r from-indigo-900 to-purple-900 p-5 sm:p-6 text-white flex justify-between">
+                    <div><h3 class="font-bold text-lg"><i class="fas fa-receipt text-purple-300 mr-2"></i>経費レシート AI解析</h3><p class="text-xs text-indigo-200 mt-1">複数枚対応</p></div>
+                    <i class="fas fa-camera text-4xl opacity-20"></i>
                 </div>
-                <div id="furusato-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
-                <div class="mt-3 pt-3 border-t flex justify-between items-center bg-emerald-50 p-3 rounded-lg">
-                    <span class="text-sm font-bold text-emerald-700">今年の寄付合計</span>
-                    <span class="text-xl font-bold font-mono text-emerald-700" id="furusato-total">¥0</span>
-                </div>
-            </div>
-            <!-- 稼働管理表 -->
-            <div class="bg-white rounded-2xl shadow-sm border p-6">
-                <div class="flex justify-between items-center border-b pb-3 mb-4">
-                    <h3 class="font-bold text-slate-800"><i class="fas fa-table text-green-500 mr-2"></i>各社 稼働管理表</h3>
-                    <button onclick="addWorkTable()" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-bold hover:bg-green-200"><i class="fas fa-plus mr-1"></i>追加</button>
-                </div>
-                <div id="work-tables-list" class="space-y-3"></div>
-                <p class="text-[10px] text-slate-400 mt-3"><i class="fas fa-info-circle mr-1"></i>会社名とスプレッドシートURLを入力して保存されます</p>
-            </div>
-            <!-- 外部ツール -->
-            <div class="bg-white rounded-2xl shadow-sm border p-6">
-                <div class="flex justify-between items-center border-b pb-3 mb-4">
-                    <h3 class="font-bold text-slate-800"><i class="fas fa-link text-indigo-500 mr-2"></i>外部ツール連携</h3>
-                    <button onclick="addTool()" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded font-bold"><i class="fas fa-plus mr-1"></i>追加</button>
-                </div>
-                <div id="tools-list" class="space-y-3"></div>
-            </div>
-            <!-- 取引先マスター -->
-            <div class="bg-white rounded-2xl shadow-sm border p-6">
-                <h3 class="font-bold text-slate-800 border-b pb-3 mb-4"><i class="fas fa-building text-blue-500 mr-2"></i>取引先マスター</h3>
-                <div class="mb-5">
-                    <label class="block text-xs font-bold text-slate-500 mb-2">収入用（クライアント）</label>
-                    <div class="flex gap-2 mb-2"><input type="text" id="new-client" class="flex-1 bg-slate-50 border rounded p-2 text-sm" placeholder="会社名"><button onclick="addMaster('clients','new-client')" class="bg-blue-600 text-white px-3 rounded text-sm font-bold">追加</button></div>
-                    <div id="client-master-list" class="flex flex-wrap gap-2"></div>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-2">支出用（外注先・店舗）</label>
-                    <div class="flex gap-2 mb-2"><input type="text" id="new-payee" class="flex-1 bg-slate-50 border rounded p-2 text-sm" placeholder="外注先名"><button onclick="addMaster('payees','new-payee')" class="bg-red-600 text-white px-3 rounded text-sm font-bold">追加</button></div>
-                    <div id="payee-master-list" class="flex flex-wrap gap-2"></div>
+                <div class="p-5 sm:p-6 space-y-5">
+                    <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
+                        <p class="font-bold text-slate-600">画像をアップロード</p>
+                        <a id="link-drive-receipt" href="#" target="_blank" class="text-xs text-blue-500 hover:underline font-bold bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 flex items-center">
+                            <i class="fas fa-folder-open mr-1"></i>経費データフォルダ
+                        </a>
+                    </div>
+                    <div id="drop-zone" class="border-2 border-dashed border-slate-300 rounded-xl p-6 sm:p-8 text-center cursor-pointer hover:bg-slate-50 transition-colors">
+                        <input type="file" id="file-input" multiple accept="image/*,.heic,.heif" class="hidden">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-slate-400 mb-3"></i>
+                        <p class="font-bold text-slate-600 text-sm">ドロップ / クリック / <kbd class="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded border border-indigo-200 text-xs">Ctrl+V</kbd></p>
+                        <p class="text-xs text-slate-400 mt-1">JPG PNG HEIC 複数枚OK</p>
+                        <div id="file-list" class="mt-4 flex flex-wrap gap-2 justify-center"></div>
+                    </div>
+                    <div class="flex items-center gap-3 justify-center">
+                        <button onclick="openDrivePicker('rc')" class="text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-full font-bold flex items-center gap-1.5 shadow-sm"><img src="https://www.google.com/favicon.ico" class="w-3.5 h-3.5">Googleドライブから選択</button>
+                    </div>
+                    <div class="flex justify-center gap-3 flex-wrap">
+                        <button id="btn-analyze" onclick="analyzeReceipts()" disabled class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-full shadow-md flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-magic mr-2"></i>レシートをAI解析</button>
+                        <button onclick="clearAiFiles('rc')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 px-4 rounded-full shadow-sm flex items-center text-sm"><i class="fas fa-times mr-1"></i>ファイルをクリア</button>
+                    </div>
+                    <div id="ai-result-container" class="hidden space-y-4 pt-4 border-t">
+                        <div class="flex flex-wrap justify-between items-end gap-3">
+                            <h4 class="font-bold text-slate-800">解析結果 (CSV)</h4>
+                            <div class="flex gap-2 flex-wrap">
+                                <button onclick="copyCsv('ai-output')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-copy mr-1"></i>コピー</button>
+                                <button onclick="downloadCsv('ai-output','receipts')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-download mr-1"></i>CSV保存</button>
+                                <button onclick="registerReceiptsToExpense()" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded shadow-sm hover:bg-indigo-700 font-bold"><i class="fas fa-bolt mr-1 text-yellow-300"></i>支出表に一括登録</button>
+                                <button onclick="clearAiResult('ai-result-container','ai-output')" class="text-xs bg-red-50 text-red-500 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded shadow-sm font-bold"><i class="fas fa-trash mr-1"></i>結果を削除</button>
+                            </div>
+                        </div>
+                        <textarea id="ai-output" rows="6" class="w-full bg-slate-50 border rounded-lg p-4 font-mono text-xs"></textarea>
+                    </div>
                 </div>
             </div>
-            <!-- サブスク -->
+
+            <!-- ===== デリバリーレシートAI解析 (NEW) ===== -->
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <div class="bg-gradient-to-r from-orange-700 to-red-800 p-5 sm:p-6 text-white flex justify-between">
+                    <div>
+                        <h3 class="font-bold text-lg"><i class="fas fa-motorcycle text-orange-300 mr-2"></i>デリバリーレシート AI解析</h3>
+                        <p class="text-xs text-orange-100 mt-1">出前館・Uber Eats等 ｜ カテゴリ: 会議費固定 ｜ 全品軽減税率8%</p>
+                    </div>
+                    <i class="fas fa-utensils text-4xl opacity-20"></i>
+                </div>
+                <div class="p-5 sm:p-6 space-y-5">
+                    <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <p class="font-bold text-slate-600">デリバリー領収書をアップロード</p>
+                            <span class="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-1 rounded-full border border-orange-200">会議費 固定</span>
+                            <span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full border border-green-200">軽減税率8% 固定</span>
+                        </div>
+                        <a id="link-drive-delivery" href="#" target="_blank" class="text-xs text-blue-500 hover:underline font-bold bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 flex items-center shrink-0">
+                            <i class="fas fa-folder-open mr-1"></i>デリバリーデータフォルダ
+                        </a>
+                    </div>
+                    <div id="drop-zone-dv" class="border-2 border-dashed border-orange-300 rounded-xl p-6 sm:p-8 text-center cursor-pointer hover:bg-orange-50 transition-colors">
+                        <input type="file" id="file-input-dv" multiple accept="image/*,.heic,.heif" class="hidden">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-orange-300 mb-3"></i>
+                        <p class="font-bold text-slate-600 text-sm">ドロップ / クリック</p>
+                        <p class="text-xs text-slate-400 mt-1">出前館・Uber Eats等の領収書スクショ 複数枚OK</p>
+                        <div id="file-list-dv" class="mt-4 flex flex-wrap gap-2 justify-center"></div>
+                    </div>
+                    <div class="flex items-center gap-3 justify-center">
+                        <button onclick="openDrivePicker('dv')" class="text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-full font-bold flex items-center gap-1.5 shadow-sm"><img src="https://www.google.com/favicon.ico" class="w-3.5 h-3.5">Googleドライブから選択</button>
+                    </div>
+                    <div class="flex justify-center gap-3 flex-wrap">
+                        <button id="btn-analyze-dv" onclick="analyzeDelivery()" disabled class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-8 rounded-full shadow-md flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-magic mr-2"></i>デリバリーレシートを解析</button>
+                        <button onclick="clearAiFiles('dv')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 px-4 rounded-full shadow-sm flex items-center text-sm"><i class="fas fa-times mr-1"></i>ファイルをクリア</button>
+                    </div>
+                    <div id="dv-result-container" class="hidden space-y-4 pt-4 border-t">
+                        <div class="flex flex-wrap justify-between items-end gap-3">
+                            <h4 class="font-bold text-slate-800">解析結果 (CSV)</h4>
+                            <div class="flex gap-2 flex-wrap">
+                                <button onclick="copyCsv('dv-output')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-copy mr-1"></i>コピー</button>
+                                <button onclick="downloadCsv('dv-output','delivery')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-download mr-1"></i>CSV保存</button>
+                                <button onclick="registerDeliveryToExpense()" class="text-xs bg-orange-600 text-white px-3 py-1.5 rounded shadow-sm hover:bg-orange-700 font-bold"><i class="fas fa-bolt mr-1 text-yellow-300"></i>支出表に一括登録</button>
+                                <button onclick="clearAiResult('dv-result-container','dv-output')" class="text-xs bg-red-50 text-red-500 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded shadow-sm font-bold"><i class="fas fa-trash mr-1"></i>結果を削除</button>
+                            </div>
+                        </div>
+                        <textarea id="dv-output" rows="6" class="w-full bg-slate-50 border rounded-lg p-4 font-mono text-xs"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 消耗品費レシートAI解析 ===== -->
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <div class="bg-gradient-to-r from-purple-800 to-violet-900 p-5 sm:p-6 text-white flex justify-between">
+                    <div>
+                        <h3 class="font-bold text-lg"><i class="fas fa-box text-purple-300 mr-2"></i>消耗品費レシート AI解析</h3>
+                        <p class="text-xs text-purple-100 mt-1">Amazon・家電量販店等 ｜ カテゴリ: 消耗品費固定 ｜ 消費税10%</p>
+                    </div>
+                    <i class="fas fa-shopping-cart text-4xl opacity-20"></i>
+                </div>
+                <div class="p-5 sm:p-6 space-y-5">
+                    <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <p class="font-bold text-slate-600">領収書・注文確認をアップロード</p>
+                            <span class="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded-full border border-purple-200">消耗品費 固定</span>
+                            <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded-full border border-slate-200">消費税10%</span>
+                        </div>
+                        <a id="link-drive-supplies" href="#" target="_blank" class="text-xs text-blue-500 hover:underline font-bold bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 flex items-center shrink-0">
+                            <i class="fas fa-folder-open mr-1"></i>消耗品データフォルダ
+                        </a>
+                    </div>
+                    <!-- 対応フォーマット案内 -->
+                    <div class="bg-purple-50 border border-purple-100 rounded-xl p-3 flex gap-3 items-start">
+                        <i class="fas fa-info-circle text-purple-400 mt-0.5 shrink-0"></i>
+                        <p class="text-xs text-purple-700 leading-relaxed">Amazon領収書PDF・スクショ、家電量販店・文具店等の領収書に対応。注文日・商品名・税込金額を自動読み取りします。</p>
+                    </div>
+                    <div id="drop-zone-sc" class="border-2 border-dashed border-purple-300 rounded-xl p-6 sm:p-8 text-center cursor-pointer hover:bg-purple-50 transition-colors">
+                        <input type="file" id="file-input-sc" multiple accept="image/*,.heic,.heif,.pdf" class="hidden">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-purple-300 mb-3"></i>
+                        <p class="font-bold text-slate-600 text-sm">ドロップ / クリック</p>
+                        <p class="text-xs text-slate-400 mt-1">Amazon領収書PDF・スクショ 複数枚OK</p>
+                        <div id="file-list-sc" class="mt-4 flex flex-wrap gap-2 justify-center"></div>
+                    </div>
+                    <div class="flex items-center gap-3 justify-center">
+                        <button onclick="openDrivePicker('sc')" class="text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-full font-bold flex items-center gap-1.5 shadow-sm"><img src="https://www.google.com/favicon.ico" class="w-3.5 h-3.5">Googleドライブから選択</button>
+                    </div>
+                    <div class="flex justify-center gap-3 flex-wrap">
+                        <button id="btn-analyze-sc" onclick="analyzeSupplies()" disabled class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-full shadow-md flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-magic mr-2"></i>消耗品費レシートを解析</button>
+                        <button onclick="clearAiFiles('sc')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 px-4 rounded-full shadow-sm flex items-center text-sm"><i class="fas fa-times mr-1"></i>ファイルをクリア</button>
+                    </div>
+                    <div id="sc-result-container" class="hidden space-y-4 pt-4 border-t">
+                        <div class="flex flex-wrap justify-between items-end gap-3">
+                            <h4 class="font-bold text-slate-800">解析結果 (CSV)</h4>
+                            <div class="flex gap-2 flex-wrap">
+                                <button onclick="copyCsv('sc-output')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-copy mr-1"></i>コピー</button>
+                                <button onclick="downloadCsv('sc-output','supplies')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-download mr-1"></i>CSV保存</button>
+                                <button onclick="registerSuppliesToExpense()" class="text-xs bg-purple-600 text-white px-3 py-1.5 rounded shadow-sm hover:bg-purple-700 font-bold"><i class="fas fa-bolt mr-1 text-yellow-300"></i>支出表に一括登録</button>
+                                <button onclick="clearAiResult('sc-result-container','sc-output')" class="text-xs bg-red-50 text-red-500 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded shadow-sm font-bold"><i class="fas fa-trash mr-1"></i>結果を削除</button>
+                            </div>
+                        </div>
+                        <textarea id="sc-output" rows="6" class="w-full bg-slate-50 border rounded-lg p-4 font-mono text-xs"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 交通費AI抽出 ===== -->
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <div class="bg-gradient-to-r from-emerald-800 to-teal-900 p-5 sm:p-6 text-white flex justify-between">
+                    <div><h3 class="font-bold text-lg"><i class="fas fa-subway text-teal-300 mr-2"></i>交通費 AI抽出</h3><p class="text-xs text-emerald-100 mt-1">Suica等の履歴 ｜ 交通費のみを自動抽出（物販除外）</p></div>
+                    <i class="fas fa-train text-4xl opacity-20"></i>
+                </div>
+                <div class="p-5 sm:p-6 space-y-5">
+                    <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
+                        <p class="font-bold text-slate-600">データを入力</p>
+                        <a id="link-drive-transport" href="#" target="_blank" class="text-xs text-blue-500 hover:underline font-bold bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 flex items-center">
+                            <i class="fas fa-folder-open mr-1"></i>交通費データフォルダ
+                        </a>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-xs font-bold text-slate-500 mb-2">① 画像（スクショ等）</label>
+                            <div id="drop-zone-tr" class="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center cursor-pointer hover:bg-slate-50 h-[120px] flex flex-col justify-center">
+                                <input type="file" id="file-input-tr" multiple accept="image/*,.heic,.heif" class="hidden">
+                                <i class="fas fa-image text-2xl text-slate-400 mb-2"></i><p class="text-xs font-bold text-slate-600">スクショ等</p>
+                                <div id="file-list-tr" class="mt-2 flex flex-wrap gap-1 justify-center"></div>
+                            </div>
+                            <button onclick="openDrivePicker('tr')" class="mt-2 w-full text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded-lg font-bold flex items-center justify-center gap-1.5"><img src="https://www.google.com/favicon.ico" class="w-3.5 h-3.5">Googleドライブから選択</button>
+                        </div>
+                        <div><label class="block text-xs font-bold text-slate-500 mb-2">② テキスト貼り付け</label>
+                            <textarea id="tr-text-input" class="w-full border rounded-lg p-2 text-xs h-[120px] resize-none focus:outline-none focus:ring-1 focus:ring-teal-500" placeholder="コピーした履歴を貼り付け..."></textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-center gap-3 flex-wrap">
+                        <button id="btn-analyze-tr" onclick="analyzeTransport()" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-8 rounded-full shadow-md flex items-center"><i class="fas fa-magic mr-2"></i>交通費を抽出</button>
+                        <button onclick="clearAiFiles('tr')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 px-4 rounded-full shadow-sm flex items-center text-sm"><i class="fas fa-times mr-1"></i>ファイルをクリア</button>
+                    </div>
+                    <div id="tr-result-container" class="hidden space-y-4 pt-4 border-t">
+                        <div class="flex flex-wrap justify-between items-end gap-3">
+                            <h4 class="font-bold text-slate-800">抽出結果 (CSV)</h4>
+                            <div class="flex gap-2 flex-wrap">
+                                <button onclick="copyCsv('tr-output')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-copy mr-1"></i>コピー</button>
+                                <button onclick="registerTransportToExpense()" class="text-xs bg-teal-600 text-white px-3 py-1.5 rounded shadow-sm hover:bg-teal-700 font-bold"><i class="fas fa-bolt mr-1 text-yellow-300"></i>支出表に一括登録</button>
+                                <button onclick="clearAiResult('tr-result-container','tr-output')" class="text-xs bg-red-50 text-red-500 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded shadow-sm font-bold"><i class="fas fa-trash mr-1"></i>結果を削除</button>
+                            </div>
+                        </div>
+                        <textarea id="tr-output" rows="6" class="w-full bg-slate-50 border rounded-lg p-4 font-mono text-xs"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History -->
             <div class="bg-white rounded-2xl shadow-sm border p-6">
-                <div class="flex justify-between items-center border-b pb-3 mb-4">
-                    <h3 class="font-bold text-slate-800"><i class="fas fa-sync text-purple-500 mr-2"></i>事業用サブスク</h3>
-                    <button onclick="addSub()" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded font-bold"><i class="fas fa-plus mr-1"></i>追加</button>
-                </div>
-                <div id="sub-list" class="space-y-3"></div>
-                <div class="mt-4 pt-4 border-t flex justify-between items-center bg-slate-50 p-3 rounded-lg">
-                    <span class="text-sm font-bold text-slate-600">サブスク合計</span>
-                    <span class="text-xl font-bold font-mono" id="set-sub-total">¥0</span>
-                </div>
+                <h3 class="font-bold text-slate-800 border-b pb-3 mb-4"><i class="fas fa-history text-slate-400 mr-2"></i>解析履歴</h3>
+                <div id="receipt-history-list" class="space-y-3"></div>
             </div>
         </div>
     </div>
-    <!-- Backup -->
-    <div class="mt-8 bg-white rounded-2xl shadow-sm border p-6">
-        <h3 class="font-bold text-slate-800 border-b pb-3 mb-4"><i class="fas fa-database text-blue-500 mr-2"></i>バックアップ・復元</h3>
-        <div class="flex flex-col sm:flex-row gap-4">
-            <button onclick="exportData()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 px-4 rounded flex items-center justify-center"><i class="fas fa-download mr-2"></i>データをバックアップ保存</button>
-            <div class="flex-1"><input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(event)"><button onclick="document.getElementById('import-file').click()" class="w-full bg-white border hover:bg-slate-50 text-slate-700 font-bold py-2 px-4 rounded flex items-center justify-center"><i class="fas fa-upload mr-2"></i>データを復元</button></div>
-        </div>
-    </div>
-    <!-- Cross-device sync guide -->
-    <div class="mt-4 bg-amber-50 border border-amber-200 rounded-2xl p-5">
-        <h3 class="font-bold text-amber-800 mb-2"><i class="fas fa-mobile-alt mr-2"></i>スマホ↔PC 連動について</h3>
-        <p class="text-xs text-amber-700 leading-relaxed mb-3">現在のデータはブラウザのローカルストレージに保存されるため、<strong>デバイス間で自動同期されません</strong>。以下の方法で対応できます：</p>
-        <div class="space-y-3">
-            <div class="bg-white border border-amber-100 rounded-xl p-3">
-                <p class="font-bold text-xs text-slate-700 mb-1"><i class="fas fa-star text-amber-500 mr-1"></i>おすすめ：手動バックアップ同期</p>
-                <p class="text-xs text-slate-500 leading-relaxed">① PCで「データをバックアップ保存」→ JSONファイルをGoogle Drive等に保存<br>② スマホのブラウザでこのページを開き「データを復元」→ 同じJSONを選択</p>
-            </div>
-            <div class="bg-white border border-amber-100 rounded-xl p-3">
-                <p class="font-bold text-xs text-slate-700 mb-1"><i class="fas fa-cloud text-blue-500 mr-1"></i>自動同期（上級）：Firebase連携</p>
-                <p class="text-xs text-slate-500 leading-relaxed">① <a href="https://console.firebase.google.com" target="_blank" class="text-blue-500 underline">Firebase Console</a> で無料プロジェクトを作成<br>② Firestoreデータベースを有効化（テストモード）<br>③ Webアプリを登録し取得した設定を開発者に共有 → コードに組み込みで自動同期が実現</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ==================== TOOLS ==================== -->
-<div id="tab-tools" class="tab-content">
-    <div class="mb-6 border-b pb-4"><h2 class="text-2xl sm:text-3xl font-bold text-slate-800">AI Tools</h2><p class="text-xs sm:text-sm text-slate-500 mt-1">領収書・交通費の自動データ化</p></div>
-
-    <!-- PDF Import -->
-    <div class="mb-8 bg-gradient-to-r from-blue-600 to-indigo-700 p-5 sm:p-6 rounded-2xl shadow-lg text-white">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-                <h3 class="font-bold text-lg"><i class="fas fa-file-pdf mr-2 text-red-300"></i>PDF取引帳 一括インポート</h3>
-                <p class="text-sm text-blue-100 mt-1">「取引帳.pdf」の2026年分データを自動入力します。</p>
-            </div>
-            <button onclick="importPdfData2026()" class="bg-white text-blue-700 px-5 py-2.5 rounded-full font-bold shadow-md hover:bg-blue-50 transition flex items-center shrink-0">
-                <i class="fas fa-file-import mr-2"></i>PDFから取り込む
-            </button>
-        </div>
-    </div>
-
-    <div class="space-y-8">
-        <!-- ===== 経費レシートAI解析 ===== -->
-        <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
-            <div class="bg-gradient-to-r from-indigo-900 to-purple-900 p-5 sm:p-6 text-white flex justify-between">
-                <div><h3 class="font-bold text-lg"><i class="fas fa-receipt text-purple-300 mr-2"></i>経費レシート AI解析</h3><p class="text-xs text-indigo-200 mt-1">複数枚対応</p></div>
-                <i class="fas fa-camera text-4xl opacity-20"></i>
-            </div>
-            <div class="p-5 sm:p-6 space-y-5">
-                <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
-                    <p class="font-bold text-slate-600">画像をアップロード</p>
-                    <a href="https://drive.google.com/drive/u/1/folders/1M3ELaaJCu-bLCUEKL0sooNl-Umfhp1wf" target="_blank" class="text-xs text-blue-500 hover:underline font-bold bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 flex items-center">
-                        <i class="fas fa-folder-open mr-1"></i>経費データフォルダ
-                    </a>
-                </div>
-                <div id="drop-zone" class="border-2 border-dashed border-slate-300 rounded-xl p-6 sm:p-8 text-center cursor-pointer hover:bg-slate-50 transition-colors">
-                    <input type="file" id="file-input" multiple accept="image/*,.heic,.heif" class="hidden">
-                    <i class="fas fa-cloud-upload-alt text-4xl text-slate-400 mb-3"></i>
-                    <p class="font-bold text-slate-600 text-sm">ドロップ / クリック / <kbd class="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded border border-indigo-200 text-xs">Ctrl+V</kbd></p>
-                    <p class="text-xs text-slate-400 mt-1">JPG PNG HEIC 複数枚OK</p>
-                    <div id="file-list" class="mt-4 flex flex-wrap gap-2 justify-center"></div>
-                </div>
-                <div class="flex items-center gap-3 justify-center">
-                    <button onclick="openDrivePicker('rc')" class="text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-full font-bold flex items-center gap-1.5 shadow-sm"><img src="https://www.google.com/favicon.ico" class="w-3.5 h-3.5">Googleドライブから選択</button>
-                </div>
-                <div class="flex justify-center gap-3 flex-wrap">
-                    <button id="btn-analyze" onclick="analyzeReceipts()" disabled class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-full shadow-md flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-magic mr-2"></i>レシートをAI解析</button>
-                    <button onclick="clearAiFiles('rc')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 px-4 rounded-full shadow-sm flex items-center text-sm"><i class="fas fa-times mr-1"></i>ファイルをクリア</button>
-                </div>
-                <div id="ai-result-container" class="hidden space-y-4 pt-4 border-t">
-                    <div class="flex flex-wrap justify-between items-end gap-3">
-                        <h4 class="font-bold text-slate-800">解析結果 (CSV)</h4>
-                        <div class="flex gap-2 flex-wrap">
-                            <button onclick="copyCsv('ai-output')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-copy mr-1"></i>コピー</button>
-                            <button onclick="downloadCsv('ai-output','receipts')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-download mr-1"></i>CSV保存</button>
-                            <button onclick="registerReceiptsToExpense()" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded shadow-sm hover:bg-indigo-700 font-bold"><i class="fas fa-bolt mr-1 text-yellow-300"></i>支出表に一括登録</button>
-                            <button onclick="clearAiResult('ai-result-container','ai-output')" class="text-xs bg-red-50 text-red-500 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded shadow-sm font-bold"><i class="fas fa-trash mr-1"></i>結果を削除</button>
-                        </div>
-                    </div>
-                    <textarea id="ai-output" rows="6" class="w-full bg-slate-50 border rounded-lg p-4 font-mono text-xs"></textarea>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== デリバリーレシートAI解析 (NEW) ===== -->
-        <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
-            <div class="bg-gradient-to-r from-orange-700 to-red-800 p-5 sm:p-6 text-white flex justify-between">
-                <div>
-                    <h3 class="font-bold text-lg"><i class="fas fa-motorcycle text-orange-300 mr-2"></i>デリバリーレシート AI解析</h3>
-                    <p class="text-xs text-orange-100 mt-1">出前館・Uber Eats等 ｜ カテゴリ: 会議費固定 ｜ 全品軽減税率8%</p>
-                </div>
-                <i class="fas fa-utensils text-4xl opacity-20"></i>
-            </div>
-            <div class="p-5 sm:p-6 space-y-5">
-                <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <p class="font-bold text-slate-600">デリバリー領収書をアップロード</p>
-                        <span class="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-1 rounded-full border border-orange-200">会議費 固定</span>
-                        <span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full border border-green-200">軽減税率8% 固定</span>
-                    </div>
-                    <a href="https://drive.google.com/drive/u/1/folders/1VaHsutrynAeOE7LCpHNVZCBCJNDNpX-f" target="_blank" class="text-xs text-blue-500 hover:underline font-bold bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 flex items-center shrink-0">
-                        <i class="fas fa-folder-open mr-1"></i>デリバリーデータフォルダ
-                    </a>
-                </div>
-                <div id="drop-zone-dv" class="border-2 border-dashed border-orange-300 rounded-xl p-6 sm:p-8 text-center cursor-pointer hover:bg-orange-50 transition-colors">
-                    <input type="file" id="file-input-dv" multiple accept="image/*,.heic,.heif" class="hidden">
-                    <i class="fas fa-cloud-upload-alt text-4xl text-orange-300 mb-3"></i>
-                    <p class="font-bold text-slate-600 text-sm">ドロップ / クリック</p>
-                    <p class="text-xs text-slate-400 mt-1">出前館・Uber Eats等の領収書スクショ 複数枚OK</p>
-                    <div id="file-list-dv" class="mt-4 flex flex-wrap gap-2 justify-center"></div>
-                </div>
-                <div class="flex items-center gap-3 justify-center">
-                    <button onclick="openDrivePicker('dv')" class="text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-full font-bold flex items-center gap-1.5 shadow-sm"><img src="https://www.google.com/favicon.ico" class="w-3.5 h-3.5">Googleドライブから選択</button>
-                </div>
-                <div class="flex justify-center gap-3 flex-wrap">
-                    <button id="btn-analyze-dv" onclick="analyzeDelivery()" disabled class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-8 rounded-full shadow-md flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-magic mr-2"></i>デリバリーレシートを解析</button>
-                    <button onclick="clearAiFiles('dv')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 px-4 rounded-full shadow-sm flex items-center text-sm"><i class="fas fa-times mr-1"></i>ファイルをクリア</button>
-                </div>
-                <div id="dv-result-container" class="hidden space-y-4 pt-4 border-t">
-                    <div class="flex flex-wrap justify-between items-end gap-3">
-                        <h4 class="font-bold text-slate-800">解析結果 (CSV)</h4>
-                        <div class="flex gap-2 flex-wrap">
-                            <button onclick="copyCsv('dv-output')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-copy mr-1"></i>コピー</button>
-                            <button onclick="downloadCsv('dv-output','delivery')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-download mr-1"></i>CSV保存</button>
-                            <button onclick="registerDeliveryToExpense()" class="text-xs bg-orange-600 text-white px-3 py-1.5 rounded shadow-sm hover:bg-orange-700 font-bold"><i class="fas fa-bolt mr-1 text-yellow-300"></i>支出表に一括登録</button>
-                            <button onclick="clearAiResult('dv-result-container','dv-output')" class="text-xs bg-red-50 text-red-500 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded shadow-sm font-bold"><i class="fas fa-trash mr-1"></i>結果を削除</button>
-                        </div>
-                    </div>
-                    <textarea id="dv-output" rows="6" class="w-full bg-slate-50 border rounded-lg p-4 font-mono text-xs"></textarea>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== 消耗品費レシートAI解析 ===== -->
-        <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
-            <div class="bg-gradient-to-r from-purple-800 to-violet-900 p-5 sm:p-6 text-white flex justify-between">
-                <div>
-                    <h3 class="font-bold text-lg"><i class="fas fa-box text-purple-300 mr-2"></i>消耗品費レシート AI解析</h3>
-                    <p class="text-xs text-purple-100 mt-1">Amazon・家電量販店等 ｜ カテゴリ: 消耗品費固定 ｜ 消費税10%</p>
-                </div>
-                <i class="fas fa-shopping-cart text-4xl opacity-20"></i>
-            </div>
-            <div class="p-5 sm:p-6 space-y-5">
-                <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <p class="font-bold text-slate-600">領収書・注文確認をアップロード</p>
-                        <span class="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded-full border border-purple-200">消耗品費 固定</span>
-                        <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded-full border border-slate-200">消費税10%</span>
-                    </div>
-                </div>
-                <!-- 対応フォーマット案内 -->
-                <div class="bg-purple-50 border border-purple-100 rounded-xl p-3 flex gap-3 items-start">
-                    <i class="fas fa-info-circle text-purple-400 mt-0.5 shrink-0"></i>
-                    <p class="text-xs text-purple-700 leading-relaxed">Amazon領収書PDF・スクショ、家電量販店・文具店等の領収書に対応。注文日・商品名・税込金額を自動読み取りします。</p>
-                </div>
-                <div id="drop-zone-sc" class="border-2 border-dashed border-purple-300 rounded-xl p-6 sm:p-8 text-center cursor-pointer hover:bg-purple-50 transition-colors">
-                    <input type="file" id="file-input-sc" multiple accept="image/*,.heic,.heif,.pdf" class="hidden">
-                    <i class="fas fa-cloud-upload-alt text-4xl text-purple-300 mb-3"></i>
-                    <p class="font-bold text-slate-600 text-sm">ドロップ / クリック</p>
-                    <p class="text-xs text-slate-400 mt-1">Amazon領収書PDF・スクショ 複数枚OK</p>
-                    <div id="file-list-sc" class="mt-4 flex flex-wrap gap-2 justify-center"></div>
-                </div>
-                <div class="flex items-center gap-3 justify-center">
-                    <button onclick="openDrivePicker('sc')" class="text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-full font-bold flex items-center gap-1.5 shadow-sm"><img src="https://www.google.com/favicon.ico" class="w-3.5 h-3.5">Googleドライブから選択</button>
-                </div>
-                <div class="flex justify-center gap-3 flex-wrap">
-                    <button id="btn-analyze-sc" onclick="analyzeSupplies()" disabled class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-full shadow-md flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-magic mr-2"></i>消耗品費レシートを解析</button>
-                    <button onclick="clearAiFiles('sc')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 px-4 rounded-full shadow-sm flex items-center text-sm"><i class="fas fa-times mr-1"></i>ファイルをクリア</button>
-                </div>
-                <div id="sc-result-container" class="hidden space-y-4 pt-4 border-t">
-                    <div class="flex flex-wrap justify-between items-end gap-3">
-                        <h4 class="font-bold text-slate-800">解析結果 (CSV)</h4>
-                        <div class="flex gap-2 flex-wrap">
-                            <button onclick="copyCsv('sc-output')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-copy mr-1"></i>コピー</button>
-                            <button onclick="downloadCsv('sc-output','supplies')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-download mr-1"></i>CSV保存</button>
-                            <button onclick="registerSuppliesToExpense()" class="text-xs bg-purple-600 text-white px-3 py-1.5 rounded shadow-sm hover:bg-purple-700 font-bold"><i class="fas fa-bolt mr-1 text-yellow-300"></i>支出表に一括登録</button>
-                            <button onclick="clearAiResult('sc-result-container','sc-output')" class="text-xs bg-red-50 text-red-500 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded shadow-sm font-bold"><i class="fas fa-trash mr-1"></i>結果を削除</button>
-                        </div>
-                    </div>
-                    <textarea id="sc-output" rows="6" class="w-full bg-slate-50 border rounded-lg p-4 font-mono text-xs"></textarea>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== 交通費AI抽出 ===== -->
-        <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
-            <div class="bg-gradient-to-r from-emerald-800 to-teal-900 p-5 sm:p-6 text-white flex justify-between">
-                <div><h3 class="font-bold text-lg"><i class="fas fa-subway text-teal-300 mr-2"></i>交通費 AI抽出</h3><p class="text-xs text-emerald-100 mt-1">Suica等の履歴 ｜ 交通費のみを自動抽出（物販除外）</p></div>
-                <i class="fas fa-train text-4xl opacity-20"></i>
-            </div>
-            <div class="p-5 sm:p-6 space-y-5">
-                <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
-                    <p class="font-bold text-slate-600">データを入力</p>
-                    <a href="https://drive.google.com/drive/u/1/folders/1zWfG5SwRAO26WEXAuZbAX8HXXZRLeHpn" target="_blank" class="text-xs text-blue-500 hover:underline font-bold bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 flex items-center">
-                        <i class="fas fa-folder-open mr-1"></i>交通費データフォルダ
-                    </a>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label class="block text-xs font-bold text-slate-500 mb-2">① 画像（スクショ等）</label>
-                        <div id="drop-zone-tr" class="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center cursor-pointer hover:bg-slate-50 h-[120px] flex flex-col justify-center">
-                            <input type="file" id="file-input-tr" multiple accept="image/*,.heic,.heif" class="hidden">
-                            <i class="fas fa-image text-2xl text-slate-400 mb-2"></i><p class="text-xs font-bold text-slate-600">スクショ等</p>
-                            <div id="file-list-tr" class="mt-2 flex flex-wrap gap-1 justify-center"></div>
-                        </div>
-                        <button onclick="openDrivePicker('tr')" class="mt-2 w-full text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded-lg font-bold flex items-center justify-center gap-1.5"><img src="https://www.google.com/favicon.ico" class="w-3.5 h-3.5">Googleドライブから選択</button>
-                    </div>
-                    <div><label class="block text-xs font-bold text-slate-500 mb-2">② テキスト貼り付け</label>
-                        <textarea id="tr-text-input" class="w-full border rounded-lg p-2 text-xs h-[120px] resize-none focus:outline-none focus:ring-1 focus:ring-teal-500" placeholder="コピーした履歴を貼り付け..."></textarea>
-                    </div>
-                </div>
-                <div class="flex justify-center gap-3 flex-wrap">
-                    <button id="btn-analyze-tr" onclick="analyzeTransport()" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-8 rounded-full shadow-md flex items-center"><i class="fas fa-magic mr-2"></i>交通費を抽出</button>
-                    <button onclick="clearAiFiles('tr')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 px-4 rounded-full shadow-sm flex items-center text-sm"><i class="fas fa-times mr-1"></i>ファイルをクリア</button>
-                </div>
-                <div id="tr-result-container" class="hidden space-y-4 pt-4 border-t">
-                    <div class="flex flex-wrap justify-between items-end gap-3">
-                        <h4 class="font-bold text-slate-800">抽出結果 (CSV)</h4>
-                        <div class="flex gap-2 flex-wrap">
-                            <button onclick="copyCsv('tr-output')" class="text-xs bg-white border px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold"><i class="fas fa-copy mr-1"></i>コピー</button>
-                            <button onclick="registerTransportToExpense()" class="text-xs bg-teal-600 text-white px-3 py-1.5 rounded shadow-sm hover:bg-teal-700 font-bold"><i class="fas fa-bolt mr-1 text-yellow-300"></i>支出表に一括登録</button>
-                            <button onclick="clearAiResult('tr-result-container','tr-output')" class="text-xs bg-red-50 text-red-500 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded shadow-sm font-bold"><i class="fas fa-trash mr-1"></i>結果を削除</button>
-                        </div>
-                    </div>
-                    <textarea id="tr-output" rows="6" class="w-full bg-slate-50 border rounded-lg p-4 font-mono text-xs"></textarea>
-                </div>
-            </div>
-        </div>
-
-        <!-- History -->
-        <div class="bg-white rounded-2xl shadow-sm border p-6">
-            <h3 class="font-bold text-slate-800 border-b pb-3 mb-4"><i class="fas fa-history text-slate-400 mr-2"></i>解析履歴</h3>
-            <div id="receipt-history-list" class="space-y-3"></div>
-        </div>
-    </div>
-</div>
-```
 
 </div><!-- /main content wrapper -->
 </main>
@@ -1039,7 +1061,6 @@
 <datalist id="payee-list"></datalist>
 
 <!-- ===== INCOME MODAL ===== -->
-
 <div id="income-modal" class="modal-bg">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg flex flex-col max-h-[90vh] m-2 sm:m-0">
         <div class="bg-slate-800 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center shrink-0 rounded-t-2xl">
@@ -1079,7 +1100,6 @@
 </div>
 
 <!-- ===== EXPENSE MODAL ===== -->
-
 <div id="expense-modal" class="modal-bg">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg flex flex-col max-h-[90vh] m-2 sm:m-0">
         <div class="bg-slate-800 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center shrink-0 rounded-t-2xl">
@@ -1120,7 +1140,6 @@
 </div>
 
 <!-- ===== APPORTION CSV MODAL ===== -->
-
 <div id="apportion-csv-modal" class="modal-bg z-[85]">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col m-4">
         <div class="bg-amber-600 px-5 py-4 flex justify-between items-center rounded-t-2xl">
@@ -1155,7 +1174,6 @@
 </div>
 
 <!-- ===== FURUSATO MODAL ===== -->
-
 <div id="furusato-modal" class="modal-bg z-[90]">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm flex flex-col m-4">
         <div class="bg-emerald-700 px-5 py-4 flex justify-between items-center rounded-t-2xl">
@@ -1177,7 +1195,6 @@
 </div>
 
 <!-- Confirm Modal -->
-
 <div id="confirm-modal" class="modal-bg z-[100]">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm m-4 flex flex-col overflow-hidden">
         <div class="bg-red-50 px-5 py-4 border-b border-red-100 flex items-center gap-3">
@@ -1193,7 +1210,6 @@
 </div>
 
 <!-- Alert Modal -->
-
 <div id="alert-modal" class="modal-bg z-[110]">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm m-4 flex flex-col overflow-hidden">
         <div class="p-8 text-center">
@@ -1210,7 +1226,13 @@
 'use strict';
 const STORAGE_KEY='cr_erp_v5';
 const API_KEY='';
-const DEF={settings:{apportion:[{id:'rent',name:'家賃',ratio:10,defaultAmount:129000,yayoiKamoku:'地代家賃（自宅兼事務所用）',torihikiSaki:'アイレントホーム株式会社',taxType:'非課税'},{id:'util',name:'水光熱費',ratio:20,defaultAmount:10000,yayoiKamoku:'水道光熱費',torihikiSaki:'',taxType:'課対仕入10%'},{id:'phone',name:'通信費・スマホ代',ratio:50,defaultAmount:8000,yayoiKamoku:'通信費',torihikiSaki:'',taxType:'課対仕入10%'}],kyosai:70000,nisa:50000,ideco:0,prevYearTaxable:0,kyosaiStartMonth:'',subs:[],externalTools:[{name:'Google Drive',url:'https://drive.google.com/'}],workTables:[{name:'株式会社アイ・ファクトリー',url:'https://docs.google.com/spreadsheets/d/1GOf5BfvJQXjpmZXhzeDb_eLJsppWs8vqyW6rMDxjDkk/edit?pli=1&gid=325275437#gid=325275437'},{name:'株式会社A1Growth',url:'https://docs.google.com/spreadsheets/d/1ToDjuYoWjBuGSb-xkHVYKB3yd5K21GpZHAM2alnKxAQ/edit?gid=1604662573#gid=1604662573'}],memo:'',geminiApiKey:'',withholding:true,
+const DEF={settings:{apportion:[{id:'rent',name:'家賃',ratio:10,defaultAmount:129000,yayoiKamoku:'地代家賃（自宅兼事務所用）',torihikiSaki:'アイレントホーム株式会社',taxType:'非課税'},{id:'util',name:'水光熱費',ratio:20,defaultAmount:10000,yayoiKamoku:'水道光熱費',torihikiSaki:'',taxType:'課対仕入10%'},{id:'phone',name:'通信費・スマホ代',ratio:50,defaultAmount:8000,yayoiKamoku:'通信費',torihikiSaki:'',taxType:'課対仕入10%'}],kyosai:70000,nisa:50000,ideco:0,prevYearTaxable:0,kyosaiStartMonth:'',
+    driveFolders:{
+        receipt:'https://drive.google.com/drive/u/1/folders/1M3ELaaJCu-bLCUEKL0sooNl-Umfhp1wf',
+        delivery:'https://drive.google.com/drive/u/1/folders/1VaHsutrynAeOE7LCpHNVZCBCJNDNpX-f',
+        supplies:'',
+        transport:'https://drive.google.com/drive/u/1/folders/1zWfG5SwRAO26WEXAuZbAX8HXXZRLeHpn'
+    },subs:[],externalTools:[{name:'Google Drive',url:'https://drive.google.com/'}],workTables:[{name:'株式会社アイ・ファクトリー',url:'https://docs.google.com/spreadsheets/d/1GOf5BfvJQXjpmZXhzeDb_eLJsppWs8vqyW6rMDxjDkk/edit?pli=1&gid=325275437#gid=325275437'},{name:'株式会社A1Growth',url:'https://docs.google.com/spreadsheets/d/1ToDjuYoWjBuGSb-xkHVYKB3yd5K21GpZHAM2alnKxAQ/edit?gid=1604662573#gid=1604662573'}],memo:'',geminiApiKey:'',withholding:true,
     // ⑤ 税務プロファイル
     taxProfile:{
         filingType:'blue65',    // blue65 / blue55 / blue10 / white
@@ -1242,6 +1264,7 @@ function migrate(d){
     if(s.settings.withholding===undefined)s.settings.withholding=true;
     if(s.settings.prevYearTaxable===undefined)s.settings.prevYearTaxable=0;
     if(s.settings.kyosaiStartMonth===undefined)s.settings.kyosaiStartMonth='';
+    if(!s.settings.driveFolders)s.settings.driveFolders={receipt:'',delivery:'',supplies:'',transport:''};
     if(!s.settings.taxProfile)s.settings.taxProfile={...b.settings.taxProfile};
     else s.settings.taxProfile={...b.settings.taxProfile,...s.settings.taxProfile};
     if(!Array.isArray(s.furusato))s.furusato=[];
@@ -2023,6 +2046,13 @@ function renderSettings(){
     if(prevTaxEl)prevTaxEl.value=S.settings.prevYearTaxable||'';
     const kyosaiStartEl=document.getElementById('set-kyosai-start');
     if(kyosaiStartEl)kyosaiStartEl.value=S.settings.kyosaiStartMonth||'';
+    // Drive フォルダURL
+    const df=S.settings.driveFolders||{};
+    ['receipt','delivery','supplies','transport'].forEach(k=>{
+        const el=document.getElementById(`set-drive-${k}`);
+        if(el)el.value=df[k]||'';
+    });
+    renderDriveLinks();
     // 国保概算表示
     const hlthEl=document.getElementById('hlth-estimate-display');
     if(hlthEl){
@@ -2065,6 +2095,22 @@ function saveTaxProfile(){
     S.settings.taxProfile={filingType:ft,invoiceType:it,withholding:wh};
     save();runSimulation();
 }
+function renderDriveLinks(){
+    const df=S.settings.driveFolders||{};
+    const map={receipt:'link-drive-receipt',delivery:'link-drive-delivery',supplies:'link-drive-supplies',transport:'link-drive-transport'};
+    Object.entries(map).forEach(([key,id])=>{
+        const el=document.getElementById(id);
+        if(!el)return;
+        const url=df[key]||'';
+        if(url){
+            el.href=url;
+            el.classList.remove('opacity-30','pointer-events-none');
+        }else{
+            el.href='#';
+            el.classList.add('opacity-30','pointer-events-none');
+        }
+    });
+}
 function addApportion(){S.settings.apportion.push({id:'a'+Date.now(),name:'新規項目',ratio:10,defaultAmount:5000,yayoiKamoku:'',torihikiSaki:'',taxType:'課対仕入10%'});save();renderSettings();dashMonthChanged();}
 function updateApportion(i,k,v){S.settings.apportion[i][k]=(k==='ratio'||k==='defaultAmount')?Number(v):v;save();dashMonthChanged();}
 function deleteApportion(i){S.settings.apportion.splice(i,1);save();renderSettings();dashMonthChanged();}
@@ -2077,6 +2123,12 @@ function saveSettings(){
     if(prevTaxEl)S.settings.prevYearTaxable=Number(prevTaxEl.value)||0;
     const kyosaiStartEl=document.getElementById('set-kyosai-start');
     if(kyosaiStartEl)S.settings.kyosaiStartMonth=kyosaiStartEl.value||'';
+    // Drive フォルダURL保存
+    if(!S.settings.driveFolders)S.settings.driveFolders={};
+    ['receipt','delivery','supplies','transport'].forEach(k=>{
+        const el=document.getElementById(`set-drive-${k}`);
+        if(el)S.settings.driveFolders[k]=el.value.trim();
+    });
     save();runSimulation();renderSettings();
 }
 function renderTools(){const c=document.getElementById('tools-list');c.innerHTML='';S.settings.externalTools.forEach((tool,i)=>{const div=document.createElement('div');div.className='flex flex-col gap-2 bg-slate-50 border p-3 rounded-lg';div.innerHTML=`<div class="flex justify-between items-center gap-2"><input type="text" value="${tool.name}" onchange="updateTool(${i},'name',this.value)" class="flex-1 bg-white border rounded p-1.5 text-sm font-bold" placeholder="ツール名"><button onclick="deleteTool(${i})" class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash text-sm"></i></button></div><div class="flex items-center gap-2"><i class="fas fa-link text-slate-400"></i><input type="text" value="${tool.url}" onchange="updateTool(${i},'url',this.value)" class="flex-1 bg-white border rounded p-1.5 text-xs font-mono" placeholder="https://..."><a href="${tool.url}" target="_blank" class="text-blue-500 hover:text-blue-700 p-1"><i class="fas fa-external-link-alt"></i></a></div>`;c.appendChild(div);});}
@@ -2480,10 +2532,26 @@ function loadGapiAndGis(){
 function openDrivePicker(target){
     _drivePickerTarget=target;
     if(!_gapiInited||!_gisInited||!_tokenClient){
+        // 初期化中なら自動リトライ（最大10秒）
         loadGapiAndGis();
-        customAlert('Googleドライブを初期化中です。\n2〜3秒後にもう一度お試しください。','info');
+        customAlert('Googleドライブを準備中です…\n自動で開きます（数秒お待ちください）','info');
+        let tries=0;
+        const retry=setInterval(()=>{
+            tries++;
+            if(_gapiInited&&_gisInited&&_tokenClient){
+                clearInterval(retry);
+                closeAlert();
+                _openDrivePickerReady();
+            }else if(tries>20){
+                clearInterval(retry);
+                customAlert('Google APIの初期化に失敗しました。\nページを再読み込みしてお試しください。','error');
+            }
+        },500);
         return;
     }
+    _openDrivePickerReady();
+}
+function _openDrivePickerReady(){
     _tokenClient.callback=async(resp)=>{
         if(resp.error){customAlert('Google認証に失敗しました: '+resp.error,'error');return;}
         showDrivePicker(resp.access_token);
@@ -2493,12 +2561,18 @@ function openDrivePicker(target){
 }
 
 function showDrivePicker(accessToken){
-    const view=new google.picker.View(google.picker.ViewId.DOCS_IMAGES);
-    view.setMimeTypes('image/jpeg,image/png,image/heic,image/webp,application/pdf');
+    // フォルダ閲覧可能なDocsビュー
+    const view=new google.picker.DocsView()
+        .setIncludeFolders(true)
+        .setSelectFolderEnabled(false)
+        .setMimeTypes('image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,application/pdf');
+    // マイドライブを起点に表示
     const picker=new google.picker.PickerBuilder()
         .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+        .enableFeature(google.picker.Feature.NAV_HIDDEN)
         .setOAuthToken(accessToken)
         .addView(view)
+        .addView(new google.picker.DocsUploadView())
         .setCallback((data)=>drivePickerCallback(data,accessToken))
         .build();
     picker.setVisible(true);
@@ -2993,6 +3067,5 @@ async function save(){
     }
 })();
 </script>
-
 </body>
 </html>

@@ -2560,19 +2560,34 @@ function _openDrivePickerReady(){
     else{_tokenClient.requestAccessToken({prompt:''});}
 }
 
+function extractFolderId(url){
+    if(!url)return null;
+    // https://drive.google.com/drive/folders/FOLDER_ID
+    // https://drive.google.com/drive/u/1/folders/FOLDER_ID
+    const m=url.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+    return m?m[1]:null;
+}
+
 function showDrivePicker(accessToken){
-    // フォルダ閲覧可能なDocsビュー
+    const df=S.settings.driveFolders||{};
+    const folderUrlMap={rc:'receipt',dv:'delivery',sc:'supplies',tr:'transport'};
+    const folderKey=folderUrlMap[_drivePickerTarget];
+    const folderId=extractFolderId(df[folderKey]||'');
+
     const view=new google.picker.DocsView()
         .setIncludeFolders(true)
         .setSelectFolderEnabled(false)
         .setMimeTypes('image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,application/pdf');
-    // マイドライブを起点に表示
+
+    // 設定フォルダがあればそこをデフォルトに
+    if(folderId){
+        view.setParent(folderId);
+    }
+
     const picker=new google.picker.PickerBuilder()
         .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-        .enableFeature(google.picker.Feature.NAV_HIDDEN)
         .setOAuthToken(accessToken)
         .addView(view)
-        .addView(new google.picker.DocsUploadView())
         .setCallback((data)=>drivePickerCallback(data,accessToken))
         .build();
     picker.setVisible(true);

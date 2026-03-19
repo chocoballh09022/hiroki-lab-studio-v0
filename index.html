@@ -79,6 +79,7 @@
             <li class="pt-4 pb-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Management</li>
             <li><button id="nav-settings"  onclick="switchTab('settings')"  class="nav-item w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg text-left gap-2"><i class="fas fa-sliders-h text-amber-400 w-5"></i>設定・マスター</button></li>
             <li><button id="nav-tools"     onclick="switchTab('tools')"     class="nav-item w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg text-left gap-2"><i class="fas fa-robot text-purple-400 w-5"></i>経費AI・ツール</button></li>
+            <li><button id="nav-corp"      onclick="switchTab('corp')"      class="nav-item w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg text-left gap-2"><i class="fas fa-building text-cyan-400 w-5"></i>法人化試算</button></li>
         </ul>
         <div class="px-4 mt-6 mb-4">
             <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"><i class="fas fa-pen-nib mr-1"></i>Quick Memo</label>
@@ -841,6 +842,189 @@
         </div>
     </div>
 
+    <!-- ==================== CORP ==================== -->
+    <div id="tab-corp" class="tab-content">
+        <div class="mb-6 border-b pb-4">
+            <h2 class="text-2xl sm:text-3xl font-bold text-slate-800">法人化 シミュレーター</h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">個人事業主 vs 法人化の税負担・手取りを比較</p>
+        </div>
+
+        <!-- 入力パネル -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+            <!-- 売上・経費（自動連動） -->
+            <div class="bg-white rounded-2xl shadow-sm border p-5">
+                <h3 class="font-bold text-slate-800 border-b pb-3 mb-4 text-sm"><i class="fas fa-chart-line text-blue-500 mr-2"></i>売上・経費（自動連動）</h3>
+                <div class="space-y-3 text-sm">
+                    <div class="flex justify-between items-center bg-slate-50 p-3 rounded-lg">
+                        <span class="text-slate-600 font-bold">年間売上予測</span>
+                        <span class="font-mono font-bold text-slate-800" id="corp-rev-display">¥0</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-slate-50 p-3 rounded-lg">
+                        <span class="text-slate-600 font-bold">年間経費</span>
+                        <span class="font-mono font-bold text-slate-800" id="corp-exp-display">¥0</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <span class="text-blue-700 font-bold">事業所得</span>
+                        <span class="font-mono font-bold text-blue-700" id="corp-biz-display">¥0</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400">※ダッシュボードの年間予測値と連動</p>
+                </div>
+            </div>
+
+            <!-- 法人化パラメータ -->
+            <div class="bg-white rounded-2xl shadow-sm border p-5">
+                <h3 class="font-bold text-slate-800 border-b pb-3 mb-4 text-sm"><i class="fas fa-building text-cyan-500 mr-2"></i>法人化パラメータ</h3>
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">役員報酬（年額）</label>
+                        <div class="relative"><span class="absolute left-3 top-2 text-slate-400 text-xs">¥</span>
+                        <input type="number" id="corp-yakuin" value="6000000" class="w-full bg-slate-50 border rounded p-2 pl-7 font-mono text-sm" oninput="runCorpSim()"></div>
+                        <p class="text-[10px] text-slate-400 mt-0.5">低すぎると不自然・高すぎると個人税増</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">税理士費用（年額）</label>
+                        <div class="relative"><span class="absolute left-3 top-2 text-slate-400 text-xs">¥</span>
+                        <input type="number" id="corp-tax-accountant" value="400000" class="w-full bg-slate-50 border rounded p-2 pl-7 font-mono text-sm" oninput="runCorpSim()"></div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">その他法人コスト（年額）</label>
+                        <div class="relative"><span class="absolute left-3 top-2 text-slate-400 text-xs">¥</span>
+                        <input type="number" id="corp-other-cost" value="70000" class="w-full bg-slate-50 border rounded p-2 pl-7 font-mono text-sm" oninput="runCorpSim()"></div>
+                        <p class="text-[10px] text-slate-400 mt-0.5">均等割(7万)など</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">設立費用（初年度のみ）</label>
+                        <div class="relative"><span class="absolute left-3 top-2 text-slate-400 text-xs">¥</span>
+                        <input type="number" id="corp-setup-cost" value="250000" class="w-full bg-slate-50 border rounded p-2 pl-7 font-mono text-sm" oninput="runCorpSim()"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 個人設定（自動連動） -->
+            <div class="bg-white rounded-2xl shadow-sm border p-5">
+                <h3 class="font-bold text-slate-800 border-b pb-3 mb-4 text-sm"><i class="fas fa-user text-emerald-500 mr-2"></i>個人設定（自動連動）</h3>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between text-xs bg-slate-50 p-2 rounded">
+                        <span class="text-slate-500">申告方式</span>
+                        <span class="font-bold" id="corp-filing-display">青色65万</span>
+                    </div>
+                    <div class="flex justify-between text-xs bg-slate-50 p-2 rounded">
+                        <span class="text-slate-500">小規模共済</span>
+                        <span class="font-bold" id="corp-kyosai-display">¥0/月</span>
+                    </div>
+                    <div class="flex justify-between text-xs bg-slate-50 p-2 rounded">
+                        <span class="text-slate-500">インボイス</span>
+                        <span class="font-bold" id="corp-invoice-display">2割特例</span>
+                    </div>
+                    <div class="flex justify-between text-xs bg-slate-50 p-2 rounded">
+                        <span class="text-slate-500">源泉徴収</span>
+                        <span class="font-bold" id="corp-wh-display">考慮する</span>
+                    </div>
+                </div>
+                <div class="mt-3 bg-amber-50 p-3 rounded-lg border border-amber-100">
+                    <p class="text-[10px] text-amber-700 leading-relaxed"><i class="fas fa-info-circle mr-1"></i>設定タブの税務プロファイルと連動しています</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 比較結果 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+            <!-- 個人事業主 -->
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <div class="bg-slate-700 p-4 text-white">
+                    <h3 class="font-bold"><i class="fas fa-user mr-2 text-slate-300"></i>個人事業主</h3>
+                </div>
+                <div class="p-5 space-y-2" id="corp-ind-breakdown">
+                    <!-- JS生成 -->
+                </div>
+                <div class="bg-slate-50 px-5 py-4 border-t">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-sm font-bold text-slate-600">税・社保 合計</span>
+                        <span class="font-mono font-bold text-red-600 text-lg" id="corp-ind-total">¥0</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-bold text-slate-600">手取り（税後・積立後）</span>
+                        <span class="font-mono font-bold text-emerald-600 text-lg" id="corp-ind-net">¥0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 法人化 -->
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <div class="bg-cyan-700 p-4 text-white">
+                    <h3 class="font-bold"><i class="fas fa-building mr-2 text-cyan-200"></i>法人化（役員報酬設定後）</h3>
+                </div>
+                <div class="p-5 space-y-2" id="corp-corp-breakdown">
+                    <!-- JS生成 -->
+                </div>
+                <div class="bg-cyan-50 px-5 py-4 border-t">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-sm font-bold text-slate-600">税・社保 合計</span>
+                        <span class="font-mono font-bold text-red-600 text-lg" id="corp-corp-total">¥0</span>
+                    </div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-sm font-bold text-slate-600">個人手取り（税後・積立後）</span>
+                        <span class="font-mono font-bold text-emerald-600 text-lg" id="corp-corp-net">¥0</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-bold text-slate-600">法人内部留保</span>
+                        <span class="font-mono font-bold text-cyan-600 text-base" id="corp-retained">¥0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 判定・節税効果 -->
+        <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 sm:p-6 text-white mb-6">
+            <h3 class="font-bold text-lg mb-4"><i class="fas fa-balance-scale text-yellow-400 mr-2"></i>法人化の損得まとめ</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+                <div class="bg-white/10 rounded-xl p-4 text-center">
+                    <p class="text-[10px] text-slate-400 mb-1">税・社保の節減額</p>
+                    <p class="font-mono font-extrabold text-2xl" id="corp-saving-tax">¥0</p>
+                    <p class="text-[10px] text-slate-400 mt-1">個人→法人で減る税負担</p>
+                </div>
+                <div class="bg-white/10 rounded-xl p-4 text-center">
+                    <p class="text-[10px] text-slate-400 mb-1">実質節税（初年度）</p>
+                    <p class="font-mono font-extrabold text-2xl" id="corp-saving-y1">¥0</p>
+                    <p class="text-[10px] text-slate-400 mt-1">設立費用・税理士費用差引後</p>
+                </div>
+                <div class="bg-white/10 rounded-xl p-4 text-center">
+                    <p class="text-[10px] text-slate-400 mb-1">実質節税（2年目〜）</p>
+                    <p class="font-mono font-extrabold text-2xl" id="corp-saving-y2">¥0</p>
+                    <p class="text-[10px] text-slate-400 mt-1">税理士費用のみ差引後</p>
+                </div>
+            </div>
+            <!-- 判定バナー -->
+            <div id="corp-verdict" class="rounded-xl p-4 text-center text-sm font-bold"></div>
+        </div>
+
+        <!-- メリット・デメリット -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div class="bg-white rounded-2xl shadow-sm border p-5">
+                <h3 class="font-bold text-emerald-700 border-b pb-3 mb-4 text-sm"><i class="fas fa-circle-check text-emerald-500 mr-2"></i>法人化のメリット</h3>
+                <ul class="space-y-2 text-xs text-slate-700">
+                    <li class="flex items-start gap-2"><span class="text-emerald-500 mt-0.5 shrink-0">✓</span>社会保険（厚生年金）に加入→老後の年金が国民年金より大幅増</li>
+                    <li class="flex items-start gap-2"><span class="text-emerald-500 mt-0.5 shrink-0">✓</span>社会的信用が上がり大手との契約・融資がしやすくなる</li>
+                    <li class="flex items-start gap-2"><span class="text-emerald-500 mt-0.5 shrink-0">✓</span>経費の範囲が広がる（出張費・社宅・退職金など）</li>
+                    <li class="flex items-start gap-2"><span class="text-emerald-500 mt-0.5 shrink-0">✓</span>法人内部留保で収入の波を平準化できる</li>
+                    <li class="flex items-start gap-2"><span class="text-emerald-500 mt-0.5 shrink-0">✓</span>役員報酬を家族に支払うことで所得分散できる（配偶者等）</li>
+                    <li class="flex items-start gap-2"><span class="text-emerald-500 mt-0.5 shrink-0">✓</span>消費税が新設2年間免税になる可能性がある</li>
+                </ul>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border p-5">
+                <h3 class="font-bold text-red-700 border-b pb-3 mb-4 text-sm"><i class="fas fa-circle-xmark text-red-500 mr-2"></i>法人化のデメリット</h3>
+                <ul class="space-y-2 text-xs text-slate-700">
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5 shrink-0">✗</span>税理士費用が事実上必須（年30〜50万）</li>
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5 shrink-0">✗</span>赤字でも均等割（約7万/年）が発生</li>
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5 shrink-0">✗</span>設立・廃業の手続きが煩雑・費用がかかる</li>
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5 shrink-0">✗</span>小規模企業共済は法人役員も加入できるが要確認</li>
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5 shrink-0">✗</span>給与計算・社会保険手続きなど事務負担が増える</li>
+                    <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5 shrink-0">✗</span>売上が不安定な時期に固定コストが重くなる</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <!-- ==================== TOOLS ==================== -->
     <div id="tab-tools" class="tab-content">
         <div class="mb-6 border-b pb-4"><h2 class="text-2xl sm:text-3xl font-bold text-slate-800">AI Tools</h2><p class="text-xs sm:text-sm text-slate-500 mt-1">領収書・交通費の自動データ化</p></div>
@@ -1312,6 +1496,7 @@ function switchTab(id){
     document.getElementById('nav-'+id).classList.add('active');
     if(window.innerWidth<768)toggleSidebar();
     if(id==='dashboard')runSimulation();
+    if(id==='corp')runCorpSim();
 }
 function switchChartTab(tab){
     const taxPanel=document.getElementById('chart-panel-tax');
@@ -1492,6 +1677,161 @@ function setDashMode(mode,sv=true){
 let chartInstances={};
 
 // ===== 月別売上棒グラフ =====
+// ===== 法人化シミュレーター =====
+function runCorpSim(){
+    const tp=S.settings.taxProfile||{filingType:'blue65',invoiceType:'reduced2',withholding:true};
+    const dedMap={blue65:650000,blue55:550000,blue10:100000,white:0};
+    const ded=dedMap[tp.filingType]||650000;
+    const consRateMap={exempt:0,reduced2:0.02,reduced3:0.03,simple:0.05,full:0.1};
+    const consRate=consRateMap[tp.invoiceType]||0.02;
+    const filingLabel={blue65:'青色65万',blue55:'青色55万',blue10:'青色10万',white:'白色'};
+    const invoiceLabel={exempt:'免税',reduced2:'2割特例',reduced3:'3割特例',simple:'簡易課税',full:'本則課税'};
+
+    // 設定表示
+    const fd=document.getElementById('corp-filing-display');if(fd)fd.textContent=filingLabel[tp.filingType]||'青色65万';
+    const id2=document.getElementById('corp-invoice-display');if(id2)id2.textContent=invoiceLabel[tp.invoiceType]||'2割特例';
+    const wd=document.getElementById('corp-wh-display');if(wd)wd.textContent=tp.withholding!==false?'考慮する':'考慮しない';
+    const kd=document.getElementById('corp-kyosai-display');if(kd)kd.textContent=fmt(S.settings.kyosai||0)+'/月';
+
+    // 売上・経費（runSimulationの値を参照）
+    const revEl=document.getElementById('dash-revenue');
+    const month=document.getElementById('dash-month').value;
+    if(!month)return;
+    const[yStr,mStr]=month.split('-');const year=parseInt(yStr,10);const tM=parseInt(mStr,10);
+
+    // 年間売上予測
+    let revAccum=0;
+    for(let mm=1;mm<=tM;mm++){const mKey=`${year}-${String(mm).padStart(2,'0')}`;revAccum+=S.incomes.filter(i=>{const d=i.reqDate||i.payDate||'';return d.startsWith(mKey);}).reduce((s,i)=>s+Number(i.net||i.total||0),0);}
+    const revY=tM>0?Math.floor((revAccum/tM)*12):0;
+
+    // 経費（按分12ヶ月+変動確定分+サブスク）
+    let appTAccum=0,varEAccum=0;
+    for(let mm=1;mm<=tM;mm++){const mKey=`${year}-${String(mm).padStart(2,'0')}`;varEAccum+=S.expenses.filter(e=>e.payDate&&e.payDate.startsWith(mKey)).reduce((s,e)=>s+Number(e.net||e.total||0),0);S.settings.apportion.forEach(a=>{let v=S.monthlyCosts[mKey]?.[a.id];if(v===undefined)v=a.defaultAmount;appTAccum+=Math.floor(Number(v)*(a.ratio/100));});}
+    const appTFull=tM>0?Math.floor(appTAccum/tM)*12:0;
+    const subTFull=S.settings.subs.reduce((s,c)=>s+Number(c.amount||0),0)*12;
+    const expY=appTFull+varEAccum+subTFull;
+    const biz=Math.max(0,revY-expY);
+
+    document.getElementById('corp-rev-display').textContent=fmt(revY);
+    document.getElementById('corp-exp-display').textContent=fmt(expY);
+    document.getElementById('corp-biz-display').textContent=fmt(biz);
+
+    // ===== 個人事業主計算 =====
+    const kyosaiY=(()=>{
+        const start=S.settings.kyosaiStartMonth||'';let accum=0;
+        for(let mm=1;mm<=tM;mm++){const mKey=`${year}-${String(mm).padStart(2,'0')}`;if(start&&mKey<start)continue;const mv=S.monthlyCosts[mKey]?.['_kyosai'];accum+=mv!==undefined?Number(mv):(S.settings.kyosai||0);}
+        const thisM=S.monthlyCosts[month]?.['_kyosai']!==undefined?Number(S.monthlyCosts[month]['_kyosai']):(S.settings.kyosai||0);
+        return accum+thisM*(12-tM);
+    })();
+    const idecoY=(S.settings.ideco||0)*12;
+    const nenkin=203760;
+    const hlthAuto=Math.min(1060000,Math.max(0,(biz-430000)*0.1+150000));
+    const hlthOverride=(()=>{let acc=0,cnt=0;for(let mm=1;mm<=tM;mm++){const mv=S.monthlyCosts[`${year}-${String(mm).padStart(2,'0')}`]?.['_hlth'];if(mv!==undefined){acc+=Number(mv);cnt++;}}return cnt>0?Math.floor(acc/cnt)*12:null;})();
+    const hlth=hlthOverride!==null?hlthOverride:hlthAuto;
+    const prevTax=Number(S.settings.prevYearTaxable||0);
+    const hlthFinal=prevTax>0?Math.min(1060000,Math.max(0,prevTax*0.0924+52000)):hlth;
+
+    const taxable=Math.max(0,biz-ded-480000-nenkin-hlthFinal-kyosaiY-idecoY);
+    const calcIT=tx=>{let i=0;if(tx<=1950000)i=tx*.05;else if(tx<=3300000)i=tx*.1-97500;else if(tx<=6950000)i=tx*.2-427500;else if(tx<=9000000)i=tx*.23-636000;else if(tx<=18000000)i=tx*.33-1536000;else i=tx*.4-2796000;return Math.max(0,i)*1.021;};
+    const it=calcIT(taxable);
+    const juminzei=taxable*0.1+5000;
+    const jigyo=Math.max(0,(biz-2900000)*0.05);
+    const cons=revY*0.1*consRate;
+    const nisa=(S.settings.nisa||0)*12;
+    const totalTaxInd=it+juminzei+hlthFinal+nenkin+jigyo+cons;
+    const netInd=revY-expY-totalTaxInd-nisa-kyosaiY;
+
+    // ===== 法人化計算 =====
+    const yakuin=Number(document.getElementById('corp-yakuin')?.value)||6000000;
+    const taxAccountant=Number(document.getElementById('corp-tax-accountant')?.value)||400000;
+    const otherCost=Number(document.getElementById('corp-other-cost')?.value)||70000;
+    const setupCost=Number(document.getElementById('corp-setup-cost')?.value)||250000;
+
+    // 社会保険（標準報酬月額 = 役員報酬÷12で計算）
+    const stdHoshu=Math.min(yakuin/12,1390000);// 上限139万/月
+    const kenpo=stdHoshu*0.1/2*12; // 健康保険個人負担
+    const kosei=stdHoshu*0.183/2*12; // 厚生年金個人負担
+    const shMin=Math.round((kenpo+kosei)/1000)*1000;
+    const shCompany=shMin; // 会社負担も同額
+
+    // 法人の課税所得
+    const corpExp=expY+yakuin+shCompany+taxAccountant+otherCost;
+    const corpProfit=Math.max(0,revY-corpExp);
+    const corpTax=Math.max(70000,corpProfit*0.33); // 実効33%、均等割最低7万
+
+    // 個人の所得税（給与として）
+    const kyuyoKojo=yakuin<=1625000?550000:yakuin<=1800000?yakuin*0.4-100000:yakuin<=3600000?yakuin*0.3+80000:yakuin<=6600000?yakuin*0.2+440000:yakuin<=8500000?yakuin*0.1+1100000:1950000;
+    const kyuyoShotoku=Math.max(0,yakuin-kyuyoKojo);
+    const taxable2=Math.max(0,kyuyoShotoku-480000-shMin);
+    const it2=calcIT(taxable2);
+    const juminzei2=taxable2*0.1+5000;
+
+    const totalTaxCorp=corpTax+it2+juminzei2+shMin+cons;
+    const netCorp=yakuin-it2-juminzei2-shMin-nisa;
+    const retained=corpProfit-corpTax;
+
+    // ===== 節税効果 =====
+    const saving=totalTaxInd-totalTaxCorp;
+    const savingY1=saving-taxAccountant-otherCost-setupCost;
+    const savingY2=saving-taxAccountant-otherCost;
+
+    // ===== 表示 =====
+    const indBd=document.getElementById('corp-ind-breakdown');
+    if(indBd){
+        const rows=[
+            {label:'所得税',val:it,note:`課税所得 ${fmt(taxable)}`},
+            {label:'住民税',val:juminzei,note:''},
+            {label:'国民健康保険',val:hlthFinal,note:'年間'},
+            {label:'国民年金',val:nenkin,note:'年間'},
+            {label:'個人事業税',val:jigyo,note:'事業所得-290万×5%'},
+            {label:'消費税',val:cons,note:invoiceLabel[tp.invoiceType]},
+        ];
+        indBd.innerHTML=rows.map(r=>`<div class="flex justify-between items-center text-xs py-1.5 border-b border-slate-50">
+            <div><span class="text-slate-600">${r.label}</span>${r.note?`<span class="text-slate-400 ml-1">(${r.note})</span>`:''}
+            </div><span class="font-mono font-bold text-red-500">${fmt(r.val)}</span></div>`).join('');
+    }
+    const corpBd=document.getElementById('corp-corp-breakdown');
+    if(corpBd){
+        const rows=[
+            {label:'法人税等（実効33%）',val:corpTax,note:`法人利益 ${fmt(corpProfit)}`},
+            {label:'個人所得税',val:it2,note:`給与課税所得 ${fmt(taxable2)}`},
+            {label:'住民税（個人）',val:juminzei2,note:''},
+            {label:'社会保険（個人負担）',val:shMin,note:'健保＋厚生年金'},
+            {label:'社会保険（会社負担）',val:shCompany,note:'経費として計上'},
+            {label:'消費税',val:cons,note:invoiceLabel[tp.invoiceType]},
+        ];
+        corpBd.innerHTML=rows.map(r=>`<div class="flex justify-between items-center text-xs py-1.5 border-b border-slate-50">
+            <div><span class="text-slate-600">${r.label}</span>${r.note?`<span class="text-slate-400 ml-1">(${r.note})</span>`:''}
+            </div><span class="font-mono font-bold text-red-500">${fmt(r.val)}</span></div>`).join('');
+    }
+
+    document.getElementById('corp-ind-total').textContent=fmt(totalTaxInd);
+    document.getElementById('corp-ind-net').textContent=fmt(netInd);
+    document.getElementById('corp-corp-total').textContent=fmt(totalTaxCorp);
+    document.getElementById('corp-corp-net').textContent=fmt(netCorp);
+    document.getElementById('corp-retained').textContent=fmt(Math.max(0,retained));
+
+    const colorSaving=v=>v>0?'text-emerald-300':v<0?'text-red-300':'text-white';
+    const s1=document.getElementById('corp-saving-tax');if(s1){s1.textContent=(saving>=0?'+':'')+fmt(saving);s1.className=`font-mono font-extrabold text-2xl ${colorSaving(saving)}`;}
+    const s2=document.getElementById('corp-saving-y1');if(s2){s2.textContent=(savingY1>=0?'+':'')+fmt(savingY1);s2.className=`font-mono font-extrabold text-2xl ${colorSaving(savingY1)}`;}
+    const s3=document.getElementById('corp-saving-y2');if(s3){s3.textContent=(savingY2>=0?'+':'')+fmt(savingY2);s3.className=`font-mono font-extrabold text-2xl ${colorSaving(savingY2)}`;}
+
+    // 判定
+    const verdict=document.getElementById('corp-verdict');
+    if(verdict){
+        if(saving>1000000&&savingY2>500000){
+            verdict.className='rounded-xl p-4 text-center text-sm font-bold bg-emerald-500/30 border border-emerald-400/40 text-emerald-200';
+            verdict.innerHTML=`<i class="fas fa-circle-check mr-2 text-emerald-300"></i>法人化を検討する価値が高いです。2年目以降 <span class="text-emerald-300 text-lg">${fmt(savingY2)}</span> の実質節税が見込めます。`;
+        }else if(saving>0&&savingY2>0){
+            verdict.className='rounded-xl p-4 text-center text-sm font-bold bg-amber-500/20 border border-amber-400/30 text-amber-200';
+            verdict.innerHTML=`<i class="fas fa-circle-question mr-2 text-amber-300"></i>節税効果はあります（<span class="text-amber-200">${fmt(savingY2)}/年</span>）が、事務負担増と要相談。売上が安定してから検討を。`;
+        }else{
+            verdict.className='rounded-xl p-4 text-center text-sm font-bold bg-slate-600/50 border border-slate-500/30 text-slate-300';
+            verdict.innerHTML=`<i class="fas fa-circle-xmark mr-2 text-red-300"></i>現時点では法人化のコストが節税効果を上回っています。個人事業主のままが有利です。`;
+        }
+    }
+}
+
 function updateMonthlyBarChart(){
     const month=document.getElementById('dash-month').value;
     if(!month)return;

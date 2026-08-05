@@ -2168,15 +2168,6 @@ function runSimulation(){
     const thisYear=_fcMonth?parseInt(_fcMonth.split('-')[0],10):new Date().getFullYear();
     const furPaid=S.furusato.filter(f=>f.date&&f.date.startsWith(String(thisYear))).reduce((s,f)=>s+Number(f.amount||0),0);
     const furRemain=Math.max(0,fur-furPaid);
-    // ふるさと納税による住民税軽減（②上限クランプ）
-    const _furEff=Math.min(furPaid,fur);
-    const _furDeduct=Math.max(0,_furEff-2000)*(1-rate*1.021);
-    const _resAfter=Math.max(0,res-_furDeduct);
-    // 合計を寄付反映後に再計算して上書き
-    const _totAfter=totTax-res+_resAfter;
-    document.getElementById('fc-total-tax').textContent=fmt(_totAfter);
-    document.getElementById('fc-resident-tax').textContent=fmt(_resAfter);
-    const _rb=document.getElementById('fc-resident-tax-before');if(_rb)_rb.textContent=fmt(res);
 
     document.getElementById('kpi-tax-pool').textContent=fmt(pool);
     document.getElementById('kpi-furusato').textContent=fmt(fur);
@@ -2190,6 +2181,13 @@ function runSimulation(){
     document.getElementById('fc-enterprise-tax').textContent=fmt(ent);
     document.getElementById('fc-consumption-tax').textContent=fmt(cons);
     document.getElementById('fc-total-tax').textContent=fmt(totTax);
+    const _furEff=Math.min(furPaid,fur);
+    const _furDeduct=Math.max(0,_furEff-2000)*(1-rate*1.021);
+    const _resAfter=Math.max(0,res-_furDeduct);
+    const _totAfter=totTax-res+_resAfter;
+    document.getElementById('fc-resident-tax').textContent=fmt(_resAfter);
+    document.getElementById('fc-total-tax').textContent=fmt(_totAfter);
+    const _rb=document.getElementById('fc-resident-tax-before');if(_rb)_rb.textContent=fmt(res);
     const _kBase=Math.max(0,(biz-ded)-430000);
     const _hlthNext=Math.min(1060000,_kBase*0.0924+52000);
     const _k=document.getElementById('fc-kokuho');if(_k)_k.textContent=fmt(_hlthNext);

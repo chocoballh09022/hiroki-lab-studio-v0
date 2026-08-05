@@ -2164,7 +2164,8 @@ function runSimulation(){
     const nextYearIns=hlthNext+16980*12;
     const totTax=nextYearTax+nextYearIns,pool=totTax/12;
     // ふるさと納税：今年の寄付済み合計
-    const thisYear=new Date().getFullYear();
+    const _fcMonth=document.getElementById('dash-month')?.value||'';
+    const thisYear=_fcMonth?parseInt(_fcMonth.split('-')[0],10):new Date().getFullYear();
     const furPaid=S.furusato.filter(f=>f.date&&f.date.startsWith(String(thisYear))).reduce((s,f)=>s+Number(f.amount||0),0);
     const furRemain=Math.max(0,fur-furPaid);
     // ふるさと納税による住民税軽減（②上限クランプ）

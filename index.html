@@ -360,6 +360,19 @@
                             <p class="text-xs font-bold text-red-800"><i class="fas fa-exclamation-triangle mr-1"></i>翌年の後払い税金 合計予測</p>
                             <p class="font-mono font-extrabold text-red-700 text-base sm:text-lg shrink-0" id="fc-total-tax">¥0</p>
                         </div>
+                        <details class="bg-slate-50 border border-slate-200 rounded-lg mt-2 text-xs">
+                            <summary class="cursor-pointer font-bold text-slate-600 p-3 select-none"><i class="fas fa-calculator mr-1 text-slate-400"></i>計算ロジックはこちら</summary>
+                            <div class="px-3 pb-3 space-y-2.5 text-slate-600 leading-relaxed">
+                                <p class="text-[10px] text-slate-400">共通：課税所得 = 事業所得 − 各種控除 − 基礎控除48万 − 国民年金 − 国保 − 共済 − iDeCo</p>
+                                <div><span class="font-bold text-red-600">① 所得税（追加払）</span><br>課税所得に累進税率（5〜45%）→ ×1.021（復興特別所得税）→ 源泉徴収済み分を差引いた残額。</div>
+                                <div><span class="font-bold text-red-600">② 住民税（翌年）</span><br>課税所得 × 10%（所得割）＋ 5,000円（均等割）。今年の所得に対し翌年6月〜請求。</div>
+                                <div><span class="font-bold text-red-600">③ 個人事業税</span><br>（事業所得 − 290万円の事業主控除）× 5%。290万以下なら0円。</div>
+                                <div><span class="font-bold text-red-600">④ 消費税（2割特例）</span><br>年間課税売上 × 10% × 20%（＝実質売上の2%）。インボイス登録者向けの特例。</div>
+                                <div><span class="font-bold text-red-600">⑤ 国民健康保険（翌年）</span><br>（事業所得 − 43万の基礎控除＝旧ただし書き所得）× 9.24%（所得割）＋ 52,000円（均等割）、上限106万円。東京23区モデルの概算。40歳以上は介護分が別途上乗せ。</div>
+                                <div><span class="font-bold text-red-600">⑥ 国民年金</span><br>16,980円 × 12ヶ月 ＝ 固定。所得に関係なく定額（年度で改定）。</div>
+                                <p class="text-[10px] text-slate-400 pt-1 border-t">※率・上限は自治体/年度で変動。実際の通知書が来たら月別欄で上書き推奨。</p>
+                            </div>
+                        </details>
 
                         <!-- ===== 税率ブラケット シミュレーター ===== -->
                         <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-4 sm:p-5 mt-2 text-white">

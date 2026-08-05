@@ -2167,6 +2167,10 @@ function runSimulation(){
     document.getElementById('fc-enterprise-tax').textContent=fmt(ent);
     document.getElementById('fc-consumption-tax').textContent=fmt(cons);
     document.getElementById('fc-total-tax').textContent=fmt(totTax);
+    const _kBase=Math.max(0,(biz-ded)-430000);
+    const _hlthNext=Math.min(1060000,_kBase*0.0924+52000);
+    const _k=document.getElementById('fc-kokuho');if(_k)_k.textContent=fmt(_hlthNext);
+    const _n=document.getElementById('fc-nenkin');if(_n)_n.textContent=fmt(16980*12);
     // 内訳を出す場合（対応する要素があれば）
     // document.getElementById('fc-tax-only').textContent=fmt(nextYearTax);
     // document.getElementById('fc-ins-only').textContent=fmt(nextYearIns);

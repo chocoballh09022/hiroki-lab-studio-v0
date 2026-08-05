@@ -335,8 +335,9 @@
                                 <p class="font-mono font-bold text-red-600 text-xs sm:text-sm" id="fc-income-tax">¥0</p>
                             </div>
                             <div class="bg-slate-50 p-2 sm:p-3 rounded-lg border">
-                                <p class="text-[9px] sm:text-[10px] text-slate-500 mb-1">住民税（翌年）</p>
+                                <p class="text-[9px] sm:text-[10px] text-slate-500 mb-0.5">住民税（翌年）<span class="text-[8px] text-emerald-500 font-bold ml-1">ふるさと納税反映後</span></p>
                                 <p class="font-mono font-bold text-red-600 text-xs sm:text-sm" id="fc-resident-tax">¥0</p>
+                                <p class="text-[8px] text-slate-400 mt-0.5 leading-tight">反映前: <span class="font-mono line-through" id="fc-resident-tax-before">¥0</span></p>
                             </div>
                             <div class="bg-slate-50 p-2 sm:p-3 rounded-lg border">
                                 <p class="text-[9px] sm:text-[10px] text-slate-500 mb-0.5">個人事業税</p>
@@ -365,8 +366,7 @@
                             <div class="px-3 pb-3 space-y-2.5 text-slate-600 leading-relaxed">
                                 <p class="text-[10px] text-slate-400">共通：課税所得 = 事業所得 − 各種控除 − 基礎控除48万 − 国民年金 − 国保 − 共済 − iDeCo</p>
                                 <div><span class="font-bold text-red-600">① 所得税（追加払）</span><br>課税所得に累進税率（5〜45%）→ ×1.021（復興特別所得税）→ 源泉徴収済み分を差引いた残額。</div>
-                                <div><span class="font-bold text-red-600">② 住民税（翌年）</span><br>課税所得 × 10%（所得割）＋ 5,000円（均等割）。今年の所得に対し翌年6月〜請求。</div>
-                                <div><span class="font-bold text-red-600">③ 個人事業税</span><br>（事業所得 − 290万円の事業主控除）× 5%。290万以下なら0円。</div>
+                                <div><span class="font-bold text-red-600">② 住民税（翌年）</span><br>課税所得 × 10%（所得割）＋ 5,000円（均等割）。今年の所得に対し翌年6月〜請求。<br>ふるさと納税分を控除：(寄付額−2,000円)×(1−所得税率×1.021) を住民税から差引（寄付は上限目安まで有効）。カードは反映後を表示。</div><div><span class="font-bold text-red-600">③ 個人事業税</span><br>（事業所得 − 290万円の事業主控除）× 5%。290万以下なら0円。</div>
                                 <div><span class="font-bold text-red-600">④ 消費税（2割特例）</span><br>年間課税売上 × 10% × 20%（＝実質売上の2%）。インボイス登録者向けの特例。</div>
                                 <div><span class="font-bold text-red-600">⑤ 国民健康保険（翌年）</span><br>（事業所得 − 43万の基礎控除＝旧ただし書き所得）× 9.24%（所得割）＋ 52,000円（均等割）、上限106万円。東京23区モデルの概算。40歳以上は介護分が別途上乗せ。</div>
                                 <div><span class="font-bold text-red-600">⑥ 国民年金</span><br>16,980円 × 12ヶ月 ＝ 固定。所得に関係なく定額（年度で改定）。</div>
@@ -2167,6 +2167,15 @@ function runSimulation(){
     const thisYear=new Date().getFullYear();
     const furPaid=S.furusato.filter(f=>f.date&&f.date.startsWith(String(thisYear))).reduce((s,f)=>s+Number(f.amount||0),0);
     const furRemain=Math.max(0,fur-furPaid);
+    // ふるさと納税による住民税軽減（②上限クランプ）
+    const _furEff=Math.min(furPaid,fur);
+    const _furDeduct=Math.max(0,_furEff-2000)*(1-rate*1.021);
+    const _resAfter=Math.max(0,res-_furDeduct);
+    // 合計を寄付反映後に再計算して上書き
+    const _totAfter=totTax-res+_resAfter;
+    document.getElementById('fc-total-tax').textContent=fmt(_totAfter);
+    document.getElementById('fc-resident-tax').textContent=fmt(_resAfter);
+    const _rb=document.getElementById('fc-resident-tax-before');if(_rb)_rb.textContent=fmt(res);
 
     document.getElementById('kpi-tax-pool').textContent=fmt(pool);
     document.getElementById('kpi-furusato').textContent=fmt(fur);
